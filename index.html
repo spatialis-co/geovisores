@@ -1,11 +1,41 @@
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>Geovisor - ArcGIS SDK</title>
-
-<p>Aqui se iran montando los geovisores demo del portafolio de John Bareño</p>
-
-
-    </head>
-    </html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geovisores | Spatialis S.A.S.</title>
+<meta name="description" content="Demos de geovisores web con ArcGIS, Leaflet, MapLibre y OpenLayers.">
+<style>
+:root{--bg:#f6f8fa;--fg:#1f2328;--muted:#59636e;--card:#fff;--line:#d1d9e0;--accent:#0b6e75}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--card:#161b22;--line:#30363d;--accent:#4fc3cc}}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--fg);line-height:1.5}
+main{max-width:760px;margin:0 auto;padding:48px 20px}
+h1{margin:0 0 8px;font-size:1.9rem}
+.lead{margin:0 0 32px;color:var(--muted)}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+a.card{display:block;padding:18px;background:var(--card);border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none}
+a.card:hover{border-color:var(--accent)}
+a.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a.card strong{display:block;font-size:1.1rem;color:var(--accent)}
+a.card span{color:var(--muted);font-size:.92rem}
+footer{margin-top:40px;color:var(--muted);font-size:.9rem}
+footer a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+<h1>Geovisores</h1>
+<p class="lead">El mismo mapa de Bogotá con cuatro librerías de mapas distintas. Demos de Spatialis S.A.S.</p>
+<div class="grid">
+<a class="card" href="arcgis.html"><strong>ArcGIS Maps SDK</strong><span>Componentes web de Esri, versión 4.31</span></a>
+<a class="card" href="leaflet.html"><strong>Leaflet</strong><span>Versión 1.9.4 con mapa base de OpenStreetMap</span></a>
+<a class="card" href="maplibre.html"><strong>MapLibre GL JS</strong><span>Versión 5.0.1 con estilo vectorial de OpenFreeMap</span></a>
+<a class="card" href="openlayers.html"><strong>OpenLayers</strong><span>Versión 10.3.1 con mapa base de OpenStreetMap</span></a>
+</div>
+<footer>
+<p><a href="https://spatialis.com.co">spatialis.com.co</a> · <a href="https://github.com/spatialis-co/geovisores">Repositorio en GitHub</a> · <a href="../aplicaciones/">Más demos: aplicaciones</a></p>
+</footer>
+</main>
+</body>
+</html>
