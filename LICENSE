@@ -1,0 +1,11 @@
+Copyright (c) 2026 Spatialis S.A.S. y John Bareño. Todos los derechos reservados.
+
+Este repositorio contiene código de demostración y se publica únicamente para que pueda verse su funcionamiento a través de las páginas publicadas y del propio repositorio.
+
+No se concede licencia para copiar, modificar, distribuir, sublicenciar ni usar este código, total o parcialmente, con fines comerciales o en productos propios o de terceros, sin autorización previa y por escrito de los titulares. Que el repositorio sea público no concede estos derechos; GitHub permite ver y bifurcar repositorios públicos únicamente según sus Términos de Servicio.
+
+Las librerías, datos y servicios de terceros que usan las demostraciones (por ejemplo ArcGIS Maps SDK for JavaScript, Leaflet, MapLibre GL JS, OpenLayers, OpenStreetMap y OpenFreeMap) conservan sus propias licencias y términos de uso, y no están cubiertos por este aviso.
+
+El software se ofrece tal cual, sin garantía de ningún tipo, expresa o implícita.
+
+Para solicitar una licencia de uso: desarrollo@spatialis.com.co
