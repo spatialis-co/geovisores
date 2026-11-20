@@ -94,6 +94,10 @@ p, li { text-wrap: pretty; }
   inset: 0;
   display: grid;
   grid-template-rows: var(--sp-topbar-h) 1fr;
+  /* La columna implicita es `auto` y crecia hasta el ancho de contenido de la
+     barra superior, desbordando el viewport en moviles; minmax(0, 1fr) la fija
+     al ancho disponible y deja que la barra y el mapa se encojan. */
+  grid-template-columns: minmax(0, 1fr);
   /* dvh evita el salto por la barra de direcciones en moviles */
   height: 100dvh;
 }
@@ -166,7 +170,13 @@ p, li { text-wrap: pretty; }
 }
 
 .sp-topbar__title {
+  /* flex-basis 0: el titulo parte de ancho cero y solo ocupa el hueco que
+     queda tras la marca y las acciones, de modo que nunca empuja el boton
+     "Solicitar demo" fuera de la pantalla. Crece para rellenar y empuja las
+     acciones a la derecha sin necesitar un margen automatico. */
+  flex: 1 1 0;
   min-width: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -833,10 +843,21 @@ p, li { text-wrap: pretty; }
   box-shadow: var(--sp-shadow);
   backdrop-filter: blur(12px);
   cursor: pointer;
+  transition: opacity 240ms var(--sp-ease), transform 240ms var(--sp-ease);
 }
 
 .sp-fab svg { width: 16px; height: 16px; }
 .sp-fab:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+
+/* Con el panel abierto, el disparador estorba por encima de la hoja: se
+   oculta (y deja de recibir toques) mientras el panel esta desplegado. El
+   boton de cerrar del propio panel es el que lo vuelve a bajar. */
+.sp-stage:has(.sp-panel[data-open="true"]) .sp-fab {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  pointer-events: none;
+}
 
 .sp-panel__handle,
 .sp-panel__close { display: none; }
@@ -1130,6 +1151,14 @@ p, li { text-wrap: pretty; }
   .maplibregl-ctrl-group button,
   .leaflet-bar a,
   .ol-control button { width: 38px !important; height: 38px !important; line-height: 38px !important; }
+
+  /* Los widgets nativos de ArcGIS tambien crecen a tamaño tactil */
+  .esri-widget--button {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .esri-zoom .esri-widget--button { font-size: 17px !important; }
 }
 
 @media (max-width: 620px) {
