@@ -1,6 +1,6 @@
 # geovisores
 
-Geovisores web de demostración de [Spatialis S.A.S.](https://spatialis.co)
+Geovisores web de demostración de [Spatialis S.A.S.](https://spatialis.com.co)
 
 Los cuatro visores muestran **el mismo mapa de Colombia** —33 departamentos y 72 ciudades— con la misma simbología, construido sobre cuatro librerías distintas. La idea es que un cliente pueda comparar capacidades, rendimiento y costo de licenciamiento sobre un caso idéntico antes de decidir la arquitectura de su plataforma.
 
@@ -55,7 +55,7 @@ Ninguno requiere clave de API ni genera facturación:
 
 ## Interfaz
 
-`assets/spatialis-ui.css` y `assets/spatialis-ui.js` definen el sistema de interfaz compartido, alineado a los tokens de color y tipografía de spatialis.co. Incluye barra superior, panel de capas, ficha de atributos, barra de estado, cargador y los ajustes necesarios para que los controles nativos de las cuatro librerías se vean iguales.
+`assets/spatialis-ui.css` y `assets/spatialis-ui.js` definen el sistema de interfaz compartido, alineado a los tokens de color y tipografía de spatialis.com.co. Incluye barra superior, panel de capas, ficha de atributos, barra de estado, cargador y los ajustes necesarios para que los controles nativos de las cuatro librerías se vean iguales.
 
 En pantallas de hasta 860 px el panel pasa a hoja inferior con asa de arrastre y los objetivos táctiles crecen a 44 px.
 
@@ -79,4 +79,4 @@ Código de demostración, todos los derechos reservados. Consulta el archivo `LI
 
 ## Contacto
 
-Spatialis S.A.S. · <https://spatialis.co> · desarrollo@spatialis.com.co
+Spatialis S.A.S. · <https://spatialis.com.co> · desarrollo@spatialis.com.co

@@ -1,7 +1,7 @@
 /* ==========================================================================
    Spatialis · Sistema de interfaz para geovisores de demostracion
 
-   Tokens tomados del sistema oficial de spatialis.co (src/index.css), que
+   Tokens tomados del sistema oficial de spatialis.com.co (src/index.css), que
    reparte el color 60-30-10:
      60 % superficies neutras  · claro #FFFFFF/#F8FAFC · oscuro #060D17/#070D18/#0B1424
      30 % azul corporativo     · #0068B5 · #0071C5 · #00C7FD
@@ -79,7 +79,7 @@ h1, h2, h3, h4, h5, h6 {
 
 p, li { text-wrap: pretty; }
 
-/* Cifras tabulares en todo lo que sea dato, como en spatialis.co */
+/* Cifras tabulares en todo lo que sea dato, como en spatialis.com.co */
 .sp-mono,
 .sp-attrs dd,
 .sp-coords {
