@@ -1,34 +1,223 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <title>Geovisor - OpenLayers</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.3.1/ol.css">
-    <style>
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-        }
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Geovisor de Colombia · OpenLayers | Spatialis</title>
+  <meta name="description"
+    content="Geovisor web de Colombia con OpenLayers: 33 departamentos, 72 ciudades con simbología proporcional, reproyección y teselas sin API key. Demo de Spatialis S.A.S.">
+  <meta name="color-scheme" content="dark">
 
-        .map {
-            width: 100%;
-            height: 100%;
-        }
-    </style>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://services.arcgisonline.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link rel="preload" href="data/colombia-departamentos.geojson" as="fetch" crossorigin>
+  <link rel="preload" href="data/colombia-ciudades.geojson" as="fetch" crossorigin>
+
+  <style>
+    html,body{margin:0;height:100%;background:#060b17;color:#f8fafc}
+  </style>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.3.1/ol.css">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="assets/spatialis-ui.css">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 </head>
 
 <body>
+  <div class="sp-app">
 
-    <div id="map" class="map" tabindex="0"></div>
+    <header class="sp-topbar">
+      <a class="sp-brand" href="index.html" title="Volver a los geovisores de Spatialis">
+        <span class="sp-brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+          </svg>
+        </span>
+        <span class="sp-brand__name">spatialis</span>
+      </a>
 
-    <script src="https://cdn.jsdelivr.net/npm/ol@v10.3.1/dist/ol.js"></script>
+      <span class="sp-topbar__divider" aria-hidden="true"></span>
 
-    <script type="module" src="main.js"></script>
+      <div class="sp-topbar__title">
+        <h1>Geovisor de Colombia · OpenLayers</h1>
+        <p>Motor OGC: reproyección, WMS/WMTS y control fino del render</p>
+      </div>
+
+      <div class="sp-topbar__actions">
+        <span class="sp-badge sp-badge--meta"><span class="sp-badge__dot"></span>Sin API key</span>
+        <span class="sp-badge sp-badge--lib">OpenLayers 10.3.1</span>
+        <a class="sp-link sp-link--ghost" href="index.html">Otros visores</a>
+        <a class="sp-link" href="https://spatialis.co/#contacto" target="_blank" rel="noopener">Solicitar demo</a>
+      </div>
+    </header>
+
+    <div class="sp-stage">
+      <div id="map" class="sp-map" role="application" aria-label="Mapa interactivo de Colombia" tabindex="0"></div>
+
+      <aside class="sp-panel" data-open="false" aria-label="Controles del geovisor">
+        <span class="sp-panel__handle" aria-hidden="true"></span>
+        <button class="sp-panel__close" type="button" aria-label="Cerrar panel">&times;</button>
+
+        <div class="sp-panel__scroll">
+          <div class="sp-section">
+            <div class="sp-kpis">
+              <div class="sp-kpi">
+                <div class="sp-kpi__value" data-kpi="deptos">—</div>
+                <div class="sp-kpi__label">Departamentos</div>
+              </div>
+              <div class="sp-kpi">
+                <div class="sp-kpi__value" data-kpi="ciudades">—</div>
+                <div class="sp-kpi__label">Ciudades</div>
+              </div>
+              <div class="sp-kpi">
+                <div class="sp-kpi__value" data-kpi="poblacion">—</div>
+                <div class="sp-kpi__label">Hab. urbanos</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sp-section">
+            <h2 class="sp-section__title">Vistas guiadas</h2>
+            <div class="sp-chips" data-vistas>
+              <button class="sp-chip" type="button" data-vista="colombia" aria-pressed="true">Colombia</button>
+              <button class="sp-chip" type="button" data-vista="bogota">Bogotá</button>
+              <button class="sp-chip" type="button" data-vista="caribe">Caribe</button>
+              <button class="sp-chip" type="button" data-vista="eje">Eje Cafetero</button>
+            </div>
+          </div>
+
+          <div class="sp-section">
+            <h2 class="sp-section__title">Capas</h2>
+            <div class="sp-rows">
+              <label class="sp-row">
+                <input type="checkbox" id="cap-deptos" checked>
+                <span class="sp-swatch" style="background:rgba(0,113,197,.35);border-color:#00c7fd"></span>
+                <span class="sp-row__text">
+                  <span class="sp-row__name">Departamentos</span>
+                  <span class="sp-row__meta">VectorLayer · 33 entidades</span>
+                </span>
+                <span class="sp-switch" aria-hidden="true"></span>
+              </label>
+              <label class="sp-row">
+                <input type="checkbox" id="cap-etiquetas" checked>
+                <span class="sp-row__text">
+                  <span class="sp-row__name">Etiquetas territoriales</span>
+                  <span class="sp-row__meta">ol/style/Text con declutter</span>
+                </span>
+                <span class="sp-switch" aria-hidden="true"></span>
+              </label>
+              <label class="sp-row">
+                <input type="checkbox" id="cap-ciudades" checked>
+                <span class="sp-swatch" style="background:#00c7fd"></span>
+                <span class="sp-row__text">
+                  <span class="sp-row__name">Ciudades</span>
+                  <span class="sp-row__meta">Círculo proporcional a población</span>
+                </span>
+                <span class="sp-switch" aria-hidden="true"></span>
+              </label>
+            </div>
+          </div>
+
+          <details class="sp-section sp-fold">
+            <summary>Mapa base</summary>
+            <div class="sp-fold__body">
+              <div class="sp-chips" data-bases>
+                <button class="sp-chip" type="button" data-base="oscuro" aria-pressed="true">Oscuro</button>
+                <button class="sp-chip" type="button" data-base="satelite">Satélite</button>
+                <button class="sp-chip" type="button" data-base="calles">Calles</button>
+              </div>
+            </div>
+          </details>
+
+          <details class="sp-section sp-fold">
+            <summary>Leyenda y fuentes</summary>
+            <div class="sp-fold__body">
+              <div class="sp-legend sp-legend--ciudades"></div>
+              <div class="sp-legend" style="margin-top:9px">
+                <div class="sp-legend__item">
+                  <span style="display:inline-grid;place-items:center;width:24px;flex:none">
+                    <span class="sp-legend__line"></span>
+                  </span>
+                  <span>Límite departamental</span>
+                </div>
+              </div>
+              <p class="sp-note" style="margin-top:11px">
+                Capas propias derivadas de <a href="https://www.naturalearthdata.com" target="_blank"
+                  rel="noopener">Natural Earth</a> (dominio público). Teselas de Esri y OpenStreetMap, de acceso
+                anónimo.
+              </p>
+            </div>
+          </details>
+        </div>
+      </aside>
+
+      <button class="sp-fab" type="button" aria-expanded="false" aria-label="Abrir panel de capas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round" aria-hidden="true">
+          <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
+          <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" />
+        </svg>
+        Capas
+      </button>
+
+      <div class="sp-info" data-open="false" role="status" aria-live="polite">
+        <div class="sp-info__head">
+          <div>
+            <p class="sp-info__kind"></p>
+            <h3 class="sp-info__title"></h3>
+          </div>
+          <button class="sp-info__close" type="button" aria-label="Cerrar ficha">&times;</button>
+        </div>
+        <div class="sp-info__body">
+          <dl class="sp-attrs"></dl>
+        </div>
+      </div>
+
+      <div class="sp-toast" data-open="false" role="alert">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fbbf24" stroke-width="2"
+          stroke-linecap="round" style="flex:none;margin-top:1px" aria-hidden="true">
+          <path d="M12 9v4M12 17h.01" />
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+        </svg>
+        <span class="sp-toast__msg"></span>
+      </div>
+
+      <div class="sp-statusbar">
+        <span class="sp-coords">—</span>
+        <span class="sp-statusbar__spacer"></span>
+        <span class="sp-attribution">
+          Esri · © OpenStreetMap · Natural Earth · <a href="https://spatialis.co" target="_blank"
+            rel="noopener">spatialis.co</a>
+        </span>
+      </div>
+
+      <div class="sp-loader">
+        <div class="sp-loader__inner">
+          <span class="sp-loader__mark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+            </svg>
+          </span>
+          <div class="sp-loader__text">Cargando cartografía de Colombia…</div>
+          <div class="sp-loader__bar"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ol@10.3.1/dist/ol.js" defer></script>
+  <script src="assets/spatialis-ui.js" defer></script>
+  <script src="main.js" defer></script>
 </body>
 
 </html>

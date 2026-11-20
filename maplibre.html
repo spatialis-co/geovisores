@@ -1,39 +1,819 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
-    <title>Geovisor - MapLibre</title>
-    <meta property="og:description" content="Add a default marker to the map." />
-    <meta charset='utf-8'>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel='stylesheet' href='https://unpkg.com/maplibre-gl@5.0.1/dist/maplibre-gl.css' />
-    <script src='https://unpkg.com/maplibre-gl@5.0.1/dist/maplibre-gl.js'></script>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-        }
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Geovisor 3D de Colombia · MapLibre GL JS | Spatialis</title>
+  <meta name="description"
+    content="Geovisor web con terreno 3D sobre Colombia: relieve sombreado, 33 departamentos y 72 ciudades con simbología proporcional. Demo de Spatialis S.A.S. construida con MapLibre GL JS.">
+  <meta name="color-scheme" content="dark">
+  <meta property="og:title" content="Geovisor 3D de Colombia · MapLibre GL JS">
+  <meta property="og:description"
+    content="Terreno 3D, relieve sombreado y cartografía de Colombia en el navegador, sin plugins y sin licencias de datos.">
+  <meta property="og:type" content="website">
 
-        html,
-        body,
-        #map {
-            height: 100%;
-        }
-    </style>
+  <!-- Conexiones tempranas: cada preconnect ahorra el DNS + TLS del primer tile -->
+  <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
+  <link rel="preconnect" href="https://s3.amazonaws.com" crossorigin>
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://tiles.openfreemap.org">
+
+  <!-- Las capas vectoriales se piden en paralelo con la librería, no después -->
+  <link rel="preload" href="data/colombia-departamentos.geojson" as="fetch" crossorigin>
+  <link rel="preload" href="data/colombia-ciudades.geojson" as="fetch" crossorigin>
+
+  <!-- Pintado inmediato del fondo: evita el destello blanco antes del CSS -->
+  <style>
+    html,body{margin:0;height:100%;background:#060b17;color:#f8fafc}
+  </style>
+
+  <link rel="preload" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js" as="script" crossorigin>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" crossorigin>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="assets/spatialis-ui.css">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 </head>
 
 <body>
-    <div id="map"></div>
+  <div class="sp-app">
 
-    <script>
-        const map = new maplibregl.Map({
-            container: 'map',
-            style:
-                'https://tiles.openfreemap.org/styles/bright',
-            center: [-74.100723, 4.663346],
-            zoom: 10
+    <header class="sp-topbar">
+      <a class="sp-brand" href="index.html" title="Volver a los geovisores de Spatialis">
+        <span class="sp-brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+          </svg>
+        </span>
+        <span class="sp-brand__name">spatialis</span>
+      </a>
+
+      <span class="sp-topbar__divider" aria-hidden="true"></span>
+
+      <div class="sp-topbar__title">
+        <h1>Geovisor 3D de Colombia</h1>
+        <p>Terreno real, relieve sombreado y cartografía nacional</p>
+      </div>
+
+      <div class="sp-topbar__actions">
+        <span class="sp-badge sp-badge--meta"><span class="sp-badge__dot"></span>Sin API key</span>
+        <span class="sp-badge sp-badge--lib">MapLibre GL JS 5.6</span>
+        <a class="sp-link sp-link--ghost" href="index.html">Otros visores</a>
+        <a class="sp-link" href="https://spatialis.co/#contacto" target="_blank" rel="noopener">Solicitar demo</a>
+      </div>
+    </header>
+
+    <div class="sp-stage">
+      <div id="map" role="application" aria-label="Mapa 3D interactivo de Colombia"></div>
+
+      <aside class="sp-panel" data-open="false" aria-label="Controles del geovisor">
+        <span class="sp-panel__handle" aria-hidden="true"></span>
+        <button class="sp-panel__close" type="button" aria-label="Cerrar panel">&times;</button>
+
+        <div class="sp-panel__scroll">
+
+          <div class="sp-section">
+            <div class="sp-kpis">
+              <div class="sp-kpi">
+                <div class="sp-kpi__value" data-kpi="deptos">—</div>
+                <div class="sp-kpi__label">Departamentos</div>
+              </div>
+              <div class="sp-kpi">
+                <div class="sp-kpi__value" data-kpi="ciudades">—</div>
+                <div class="sp-kpi__label">Ciudades</div>
+              </div>
+              <div class="sp-kpi">
+                <div class="sp-kpi__value" data-kpi="poblacion">—</div>
+                <div class="sp-kpi__label">Hab. urbanos</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sp-section">
+            <h2 class="sp-section__title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="m3 11 19-9-9 19-2-8-8-2z" />
+              </svg>
+              Vistas guiadas
+            </h2>
+            <div class="sp-chips" data-vistas>
+              <button class="sp-chip" type="button" data-vista="colombia">Colombia</button>
+              <button class="sp-chip" type="button" data-vista="bogota" aria-pressed="true">Sabana de Bogotá</button>
+              <button class="sp-chip" type="button" data-vista="ruiz">Nevado del Ruiz</button>
+              <button class="sp-chip" type="button" data-vista="snsm">Sierra Nevada</button>
+            </div>
+          </div>
+
+          <div class="sp-section">
+            <h2 class="sp-section__title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
+                <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" />
+                <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" />
+              </svg>
+              Capas
+            </h2>
+            <div class="sp-rows">
+              <label class="sp-row">
+                <input type="checkbox" id="cap-terreno" checked>
+                <span class="sp-row__text">
+                  <span class="sp-row__name">Terreno 3D</span>
+                  <span class="sp-row__meta">Modelo de elevación · 30 m</span>
+                </span>
+                <span class="sp-switch" aria-hidden="true"></span>
+              </label>
+              <label class="sp-row">
+                <input type="checkbox" id="cap-relieve" checked>
+                <span class="sp-row__text">
+                  <span class="sp-row__name">Relieve sombreado</span>
+                  <span class="sp-row__meta">Hillshade sobre el DEM</span>
+                </span>
+                <span class="sp-switch" aria-hidden="true"></span>
+              </label>
+              <label class="sp-row">
+                <input type="checkbox" id="cap-deptos" checked>
+                <span class="sp-swatch" style="background:rgba(0,113,197,.35);border-color:#00c7fd"></span>
+                <span class="sp-row__text">
+                  <span class="sp-row__name">Departamentos</span>
+                  <span class="sp-row__meta">33 entidades · límites y relleno</span>
+                </span>
+                <span class="sp-switch" aria-hidden="true"></span>
+              </label>
+              <label class="sp-row">
+                <input type="checkbox" id="cap-etiquetas" checked>
+                <span class="sp-row__text">
+                  <span class="sp-row__name">Etiquetas territoriales</span>
+                  <span class="sp-row__meta">Nombre del departamento</span>
+                </span>
+                <span class="sp-switch" aria-hidden="true"></span>
+              </label>
+              <label class="sp-row">
+                <input type="checkbox" id="cap-ciudades" checked>
+                <span class="sp-swatch" style="background:#00c7fd"></span>
+                <span class="sp-row__text">
+                  <span class="sp-row__name">Ciudades</span>
+                  <span class="sp-row__meta">Símbolo proporcional a población</span>
+                </span>
+                <span class="sp-switch" aria-hidden="true"></span>
+              </label>
+            </div>
+          </div>
+
+          <details class="sp-section sp-fold">
+            <summary>Exageración y mapa base</summary>
+            <div class="sp-fold__body">
+              <div class="sp-range">
+                <input type="range" id="exageracion" min="1" max="3" step="0.1" value="1.5"
+                  aria-label="Exageración vertical del terreno">
+                <output class="sp-range__out" for="exageracion">1.5×</output>
+              </div>
+              <div class="sp-chips" data-bases style="margin-top:11px">
+                <button class="sp-chip" type="button" data-base="dark" aria-pressed="true">Oscuro</button>
+                <button class="sp-chip" type="button" data-base="positron">Claro</button>
+                <button class="sp-chip" type="button" data-base="liberty">Calles</button>
+              </div>
+            </div>
+          </details>
+
+          <details class="sp-section sp-fold">
+            <summary>Leyenda y fuentes</summary>
+            <div class="sp-fold__body">
+              <div class="sp-legend sp-legend--ciudades"></div>
+              <div class="sp-legend" style="margin-top:9px">
+                <div class="sp-legend__item">
+                  <span style="display:inline-grid;place-items:center;width:24px;flex:none">
+                    <span class="sp-legend__line"></span>
+                  </span>
+                  <span>Límite departamental</span>
+                </div>
+              </div>
+              <p class="sp-note" style="margin-top:11px">
+                Límites y ciudades derivados de <a href="https://www.naturalearthdata.com" target="_blank"
+                  rel="noopener">Natural Earth</a> (dominio público). Elevación: <a
+                  href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles</a>.
+                Mapa base: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> ·
+                OpenStreetMap.
+              </p>
+            </div>
+          </details>
+
+        </div>
+      </aside>
+
+      <button class="sp-fab" type="button" aria-expanded="false" aria-label="Abrir panel de capas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round" aria-hidden="true">
+          <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
+          <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" />
+        </svg>
+        Capas
+      </button>
+
+      <div class="sp-info" data-open="false" role="status" aria-live="polite">
+        <div class="sp-info__head">
+          <div>
+            <p class="sp-info__kind"></p>
+            <h3 class="sp-info__title"></h3>
+          </div>
+          <button class="sp-info__close" type="button" aria-label="Cerrar ficha">&times;</button>
+        </div>
+        <div class="sp-info__body">
+          <dl class="sp-attrs"></dl>
+        </div>
+      </div>
+
+      <div class="sp-toast" data-open="false" role="alert">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fbbf24" stroke-width="2"
+          stroke-linecap="round" style="flex:none;margin-top:1px" aria-hidden="true">
+          <path d="M12 9v4M12 17h.01" />
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+        </svg>
+        <span class="sp-toast__msg"></span>
+      </div>
+
+      <div class="sp-statusbar">
+        <span class="sp-coords">—</span>
+        <span>Elev. <strong data-elev style="color:var(--sp-muted);font-family:var(--sp-mono)">—</strong></span>
+        <span class="sp-statusbar__spacer"></span>
+        <span class="sp-attribution">
+          © OpenStreetMap · Natural Earth · <a href="https://spatialis.co" target="_blank"
+            rel="noopener">spatialis.co</a>
+        </span>
+      </div>
+
+      <div class="sp-loader">
+        <div class="sp-loader__inner">
+          <span class="sp-loader__mark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+            </svg>
+          </span>
+          <div class="sp-loader__text">Cargando terreno de Colombia…</div>
+          <div class="sp-loader__bar"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js" crossorigin defer></script>
+  <script src="assets/spatialis-ui.js" defer></script>
+
+  <script defer>
+    window.addEventListener("DOMContentLoaded", function () {
+      "use strict";
+
+      var ESTILOS = {
+        dark: "https://tiles.openfreemap.org/styles/dark",
+        positron: "https://tiles.openfreemap.org/styles/positron",
+        liberty: "https://tiles.openfreemap.org/styles/liberty",
+      };
+
+      /* Terrain Tiles de AWS: DEM global abierto, sin clave ni cuota.
+         MapLibre recomienda no compartir la fuente entre el terreno y el
+         hillshade, porque cada uno la consulta con un teselado distinto. */
+      function dem() {
+        return {
+          type: "raster-dem",
+          tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
+          encoding: "terrarium",
+          tileSize: 256,
+          maxzoom: 13,
+          attribution: "Terrain Tiles · AWS Open Data",
+        };
+      }
+
+      /* Encuadres de demostración. El inicial es oblicuo para que el relieve
+         de la cordillera se lea desde el primer segundo. */
+      var VISTAS = {
+        colombia: { center: [-73.6, 4.3], zoom: 5.1, pitch: 42, bearing: -8 },
+        bogota: { center: [-74.08, 4.62], zoom: 8.4, pitch: 64, bearing: -24 },
+        ruiz: { center: [-75.32, 4.89], zoom: 10.3, pitch: 72, bearing: 38 },
+        snsm: { center: [-73.69, 10.78], zoom: 9.2, pitch: 70, bearing: -12 },
+      };
+
+      var estado = {
+        base: "dark",
+        terreno: true,
+        relieve: true,
+        deptos: true,
+        etiquetas: true,
+        ciudades: true,
+        exageracion: 1.5,
+        demOk: true,
+      };
+
+      var datos = { deptos: null, ciudades: null };
+      var incrustado = window.self !== window.top;
+
+      var map = new maplibregl.Map({
+        container: "map",
+        style: ESTILOS.dark,
+        center: VISTAS.bogota.center,
+        zoom: 6.6,
+        pitch: 58,
+        bearing: -24,
+        maxPitch: 85,
+        minZoom: 3,
+        antialias: true,
+        attributionControl: false,
+        /* Embebido en la web: la rueda hace scroll de la página salvo que se
+           use Ctrl. Suelto, el mapa toma el control del gesto. */
+        cooperativeGestures: incrustado,
+      });
+
+      /* Expuesto a proposito: permite inspeccionar el visor desde la consola
+         durante una demo en vivo. */
+      window.spMap = map;
+
+      map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+      map.addControl(new maplibregl.ScaleControl({ maxWidth: 110, unit: "metric" }), "bottom-right");
+
+      /* ------------------------------------------------------------ datos */
+
+      var pedidos = Promise.all([
+        SP.cargarJSON(SP.DATA.departamentos),
+        SP.cargarJSON(SP.DATA.ciudades),
+      ]).then(function (res) {
+        datos.deptos = res[0];
+        datos.ciudades = res[1];
+        SP.kpi("deptos", datos.deptos.features.length);
+        SP.kpi("ciudades", datos.ciudades.features.length);
+        var hab = datos.ciudades.features.reduce(function (a, f) {
+          return a + (f.properties.poblacion || 0);
+        }, 0);
+        SP.kpi("poblacion", (hab / 1e6).toFixed(1).replace(".", ",") + " M");
+      }).catch(function (e) {
+        SP.aviso("No se pudieron cargar las capas de Colombia: " + e.message);
+        throw e;
+      });
+
+      /* ------------------------------------------------- terreno y capas */
+
+      function montarTerreno() {
+        if (!map.getSource("dem-terreno")) map.addSource("dem-terreno", dem());
+        if (!map.getSource("dem-relieve")) map.addSource("dem-relieve", dem());
+
+        if (!map.getLayer("sp-relieve")) {
+          map.addLayer({
+            id: "sp-relieve",
+            type: "hillshade",
+            source: "dem-relieve",
+            paint: {
+              "hillshade-exaggeration": 0.42,
+              "hillshade-shadow-color": "#04070f",
+              "hillshade-highlight-color": "#9fd8f0",
+              "hillshade-accent-color": "#0b3b57",
+            },
+            layout: { visibility: estado.relieve ? "visible" : "none" },
+          }, primeraEtiqueta());
+        }
+
+        aplicarTerreno();
+        aplicarCielo();
+      }
+
+      function aplicarTerreno() {
+        if (!estado.demOk) return;
+        try {
+          if (estado.terreno) {
+            map.setTerrain({ source: "dem-terreno", exaggeration: estado.exageracion });
+          } else {
+            map.setTerrain(null);
+          }
+        } catch (e) {
+          estado.demOk = false;
+          SP.aviso("El terreno 3D no está disponible en este dispositivo; se muestra el mapa en 2D.");
+        }
+      }
+
+      function aplicarCielo() {
+        try {
+          map.setSky({
+            "sky-color": "#0a1832",
+            "horizon-color": "#1d4e73",
+            "fog-color": "#060b17",
+            "sky-horizon-blend": 0.6,
+            "horizon-fog-blend": 0.45,
+            "fog-ground-blend": 0.75,
+            "atmosphere-blend": [
+              "interpolate", ["linear"], ["zoom"],
+              3, 0.2,
+              7, 0.85,
+              13, 0.3
+            ],
+          });
+        } catch (e) { /* estilos sin soporte de cielo: se ignora */ }
+      }
+
+      /* La primera capa de símbolos marca dónde insertar para quedar debajo
+         de los topónimos del mapa base. */
+      function primeraEtiqueta() {
+        var capas = map.getStyle().layers || [];
+        for (var i = 0; i < capas.length; i++) {
+          if (capas[i].type === "symbol") return capas[i].id;
+        }
+        return undefined;
+      }
+
+      function montarCapasColombia() {
+        if (!datos.deptos || !datos.ciudades) return;
+        var antes = primeraEtiqueta();
+
+        if (!map.getSource("deptos")) {
+          map.addSource("deptos", { type: "geojson", data: datos.deptos, generateId: true });
+        }
+        if (!map.getSource("ciudades")) {
+          map.addSource("ciudades", { type: "geojson", data: datos.ciudades });
+        }
+
+        var vd = estado.deptos ? "visible" : "none";
+
+        if (!map.getLayer("sp-deptos-fill")) {
+          map.addLayer({
+            id: "sp-deptos-fill",
+            type: "fill",
+            source: "deptos",
+            layout: { visibility: vd },
+            paint: {
+              "fill-color": [
+                "case",
+                ["boolean", ["feature-state", "hover"], false], "#2b8fd6",
+                SP.COLOR.relleno
+              ],
+              "fill-opacity": [
+                "case",
+                ["boolean", ["feature-state", "hover"], false], 0.42,
+                0.14
+              ],
+            },
+          }, antes);
+        }
+
+        if (!map.getLayer("sp-deptos-line")) {
+          map.addLayer({
+            id: "sp-deptos-line",
+            type: "line",
+            source: "deptos",
+            layout: { visibility: vd, "line-join": "round" },
+            paint: {
+              "line-color": SP.COLOR.limite,
+              "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.7, 8, 1.6, 12, 2.6],
+              "line-opacity": 0.85,
+            },
+          }, antes);
+        }
+
+        if (!map.getLayer("sp-deptos-label")) {
+          map.addLayer({
+            id: "sp-deptos-label",
+            type: "symbol",
+            source: "deptos",
+            layout: {
+              visibility: estado.etiquetas ? "visible" : "none",
+              "text-field": ["get", "nombre"],
+              "text-font": ["Noto Sans Bold"],
+              "text-size": ["interpolate", ["linear"], ["zoom"], 4.5, 9, 7, 11.5, 9, 13],
+              "text-transform": "uppercase",
+              "text-letter-spacing": 0.08,
+              "text-max-width": 8,
+              "text-padding": 6,
+              "symbol-sort-key": ["case", ["==", ["get", "iso"], "CO-DC"], 0, 1],
+            },
+            paint: {
+              "text-color": "#cfe9f7",
+              "text-halo-color": "#04070f",
+              "text-halo-width": 1.6,
+              /* A escala municipal los toponimos del mapa base mandan: la
+                 etiqueta departamental se retira para no duplicar texto. */
+              "text-opacity": ["interpolate", ["linear"], ["zoom"], 4, 0.95, 8, 0.8, 9.5, 0],
+            },
+          });
+        }
+
+        var vc = estado.ciudades ? "visible" : "none";
+
+        sincronizarEtiquetasBase();
+
+        if (!map.getLayer("sp-ciudades-halo")) {
+          map.addLayer({
+            id: "sp-ciudades-halo",
+            type: "circle",
+            source: "ciudades",
+            layout: { visibility: vc },
+            paint: {
+              "circle-radius": ["*", 2.1, radioPorPoblacion()],
+              "circle-color": SP.COLOR.ciudad,
+              "circle-opacity": 0.1,
+              "circle-blur": 0.65,
+            },
+          });
+        }
+
+        if (!map.getLayer("sp-ciudades")) {
+          map.addLayer({
+            id: "sp-ciudades",
+            type: "circle",
+            source: "ciudades",
+            layout: { visibility: vc },
+            paint: {
+              "circle-radius": radioPorPoblacion(),
+              "circle-color": SP.COLOR.ciudad,
+              "circle-opacity": 0.92,
+              "circle-stroke-width": ["case", ["==", ["get", "capital"], 1], 2, 1],
+              "circle-stroke-color": ["case",
+                ["==", ["get", "capital"], 1], SP.COLOR.capital,
+                SP.COLOR.ciudadBorde],
+              "circle-stroke-opacity": 0.9,
+            },
+          });
+        }
+
+        if (!map.getLayer("sp-ciudades-label")) {
+          map.addLayer({
+            id: "sp-ciudades-label",
+            type: "symbol",
+            source: "ciudades",
+            /* Por encima de zoom 6 las ciudades menores dejan de competir */
+            filter: [">=", ["get", "poblacion"], 150000],
+            layout: {
+              visibility: vc,
+              "text-field": ["get", "nombre"],
+              "text-font": ["Noto Sans Regular"],
+              "text-size": ["interpolate", ["linear"], ["zoom"], 5, 10, 9, 13],
+              "text-offset": [0, 1.1],
+              "text-anchor": "top",
+              "text-padding": 6,
+              "symbol-sort-key": ["-", 0, ["get", "poblacion"]],
+            },
+            paint: {
+              "text-color": "#ffffff",
+              "text-halo-color": "#04070f",
+              "text-halo-width": 1.5,
+            },
+          });
+        }
+      }
+
+      /* El mapa base trae su propia capa de topónimos departamentales
+         (place_state, del esquema OpenMapTiles). Se apaga mientras mostramos
+         la nuestra para no rotular dos veces el mismo territorio. */
+      function sincronizarEtiquetasBase() {
+        if (!map.getLayer("place_state")) return;
+        map.setLayoutProperty("place_state", "visibility",
+          estado.etiquetas ? "none" : "visible");
+      }
+
+      /* Radio interpolado por clases: misma escala que la leyenda y que los
+         otros tres visores. */
+      function radioPorPoblacion() {
+        return ["interpolate", ["linear"], ["get", "poblacion"],
+          0, SP.CLASES[3].radio,
+          100000, SP.CLASES[2].radio,
+          300000, SP.CLASES[1].radio,
+          1000000, SP.CLASES[0].radio,
+          8000000, SP.CLASES[0].radio + 5];
+      }
+
+      function montarTodo() {
+        montarTerreno();
+        montarCapasColombia();
+      }
+
+      /* ------------------------------------------------------ interacción */
+
+      var hover = null;
+
+      function enlazarInteraccion() {
+        map.on("mousemove", "sp-deptos-fill", function (e) {
+          map.getCanvas().style.cursor = "pointer";
+          if (!e.features.length) return;
+          if (hover !== null) {
+            map.setFeatureState({ source: "deptos", id: hover }, { hover: false });
+          }
+          hover = e.features[0].id;
+          map.setFeatureState({ source: "deptos", id: hover }, { hover: true });
         });
-    </script>
+
+        map.on("mouseleave", "sp-deptos-fill", function () {
+          map.getCanvas().style.cursor = "";
+          if (hover !== null) {
+            map.setFeatureState({ source: "deptos", id: hover }, { hover: false });
+          }
+          hover = null;
+        });
+
+        /* Un punto exacto es un objetivo imposible con el dedo, y en 3D el
+           simbolo se dibuja sobre el terreno, desplazado respecto al suelo.
+           Consultamos una caja alrededor del clic. */
+        function cajaCerca(punto) {
+          var t = matchMedia("(pointer: coarse)").matches ? 14 : 8;
+          return [
+            [punto.x - t, punto.y - t],
+            [punto.x + t, punto.y + t],
+          ];
+        }
+
+        map.on("click", function (e) {
+          var ciudad = map.queryRenderedFeatures(cajaCerca(e.point), {
+            layers: map.getLayer("sp-ciudades") ? ["sp-ciudades"] : [],
+          })[0];
+
+          if (ciudad) {
+            var p = ciudad.properties;
+            SP.ficha.mostrar(p.nombre, p.capital === 1 || p.capital === "1"
+              ? "Capital · " + p.rango : p.rango, [
+              ["Departamento", p.departamento || "—"],
+              ["Población", SP.entero(p.poblacion)],
+              ["Longitud", ciudad.geometry.coordinates[0].toFixed(4) + "°"],
+              ["Latitud", ciudad.geometry.coordinates[1].toFixed(4) + "°"],
+              ["Elevación", elevacionTexto(ciudad.geometry.coordinates)],
+            ]);
+            return;
+          }
+
+          var depto = map.queryRenderedFeatures(e.point, {
+            layers: map.getLayer("sp-deptos-fill") ? ["sp-deptos-fill"] : [],
+          })[0];
+
+          if (depto) {
+            var d = depto.properties;
+            SP.ficha.mostrar(d.nombre, d.tipo, [
+              ["Código ISO", d.iso || "—"],
+              ["Longitud", e.lngLat.lng.toFixed(4) + "°"],
+              ["Latitud", e.lngLat.lat.toFixed(4) + "°"],
+              ["Elevación", elevacionTexto([e.lngLat.lng, e.lngLat.lat])],
+            ]);
+          } else {
+            SP.ficha.cerrar();
+          }
+        });
+
+        map.on("mousemove", function (e) {
+          SP.coordenadas(e.lngLat.lng, e.lngLat.lat);
+          var el = document.querySelector("[data-elev]");
+          if (el) el.textContent = elevacionTexto([e.lngLat.lng, e.lngLat.lat]);
+        });
+      }
+
+      function elevacionTexto(lngLat) {
+        if (!estado.terreno || !estado.demOk) return "activa el terreno 3D";
+        var m = null;
+        try { m = map.queryTerrainElevation(lngLat); } catch (e) { m = null; }
+        if (m === null || m === undefined) return "—";
+        /* queryTerrainElevation devuelve la altura ya multiplicada por la
+           exageracion visual; para reportar msnm hay que deshacerla. */
+        return SP.entero(m / estado.exageracion) + " m s. n. m.";
+      }
+
+      /* -------------------------------------------------------- controles */
+
+      function visibilidad(ids, visible) {
+        ids.forEach(function (id) {
+          if (map.getLayer(id)) {
+            map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+          }
+        });
+      }
+
+      function enlazarControles() {
+        document.getElementById("cap-terreno").addEventListener("change", function () {
+          estado.terreno = this.checked;
+          aplicarTerreno();
+          if (!this.checked) {
+            map.easeTo({ pitch: 0, duration: 900 });
+          } else {
+            map.easeTo({ pitch: 62, duration: 1100 });
+          }
+        });
+
+        document.getElementById("cap-relieve").addEventListener("change", function () {
+          estado.relieve = this.checked;
+          visibilidad(["sp-relieve"], this.checked);
+        });
+
+        document.getElementById("cap-deptos").addEventListener("change", function () {
+          estado.deptos = this.checked;
+          visibilidad(["sp-deptos-fill", "sp-deptos-line"], this.checked);
+        });
+
+        document.getElementById("cap-etiquetas").addEventListener("change", function () {
+          estado.etiquetas = this.checked;
+          visibilidad(["sp-deptos-label"], this.checked);
+          sincronizarEtiquetasBase();
+        });
+
+        document.getElementById("cap-ciudades").addEventListener("change", function () {
+          estado.ciudades = this.checked;
+          visibilidad(["sp-ciudades", "sp-ciudades-halo", "sp-ciudades-label"], this.checked);
+        });
+
+        var rango = document.getElementById("exageracion");
+        var salida = document.querySelector(".sp-range__out");
+        rango.addEventListener("input", function () {
+          estado.exageracion = parseFloat(this.value);
+          salida.textContent = this.value.replace(".", ",") + "×";
+          if (estado.terreno) aplicarTerreno();
+        });
+
+        document.querySelectorAll("[data-vista]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var v = VISTAS[btn.dataset.vista];
+            if (!v) return;
+            document.querySelectorAll("[data-vista]").forEach(function (b) {
+              b.setAttribute("aria-pressed", String(b === btn));
+            });
+            if (btn.dataset.vista !== "colombia" && !estado.terreno) {
+              document.getElementById("cap-terreno").click();
+            }
+            map.flyTo({
+              center: v.center, zoom: v.zoom, pitch: v.pitch, bearing: v.bearing,
+              duration: 2400, essential: true, curve: 1.3,
+            });
+            SP.ficha.cerrar();
+          });
+        });
+
+        document.querySelectorAll("[data-base]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            if (estado.base === btn.dataset.base) return;
+            estado.base = btn.dataset.base;
+            document.querySelectorAll("[data-base]").forEach(function (b) {
+              b.setAttribute("aria-pressed", String(b === btn));
+            });
+            /* diff:false fuerza un estilo limpio; las capas se vuelven a
+               montar en el evento style.load de abajo. */
+            map.setStyle(ESTILOS[estado.base], { diff: false });
+          });
+        });
+      }
+
+      /* ----------------------------------------------------- ciclo de vida */
+
+      /* El evento "load" de MapLibre espera a que TODAS las fuentes estén
+         cargadas, y un DEM global por teselas rara vez llega a ese estado: si
+         colgáramos el arranque de ahí, el visor se quedaría sin cámara ni
+         eventos. Arrancamos cuando el estilo está montado y los datos han
+         llegado, que es lo que realmente necesitamos. */
+      var estiloListo = false;
+      var arrancado = false;
+
+      function intentarArrancar() {
+        if (arrancado || !estiloListo) return;
+        arrancado = true;
+        enlazarInteraccion();
+        enlazarControles();
+        SP.listo();
+        map.flyTo({
+          center: VISTAS.bogota.center,
+          zoom: VISTAS.bogota.zoom,
+          pitch: VISTAS.bogota.pitch,
+          bearing: VISTAS.bogota.bearing,
+          duration: 3400,
+          curve: 1.25,
+          essential: true,
+        });
+      }
+
+      map.on("style.load", function () {
+        estiloListo = true;
+        montarTerreno();
+        montarCapasColombia();
+        if (datos.deptos) intentarArrancar();
+      });
+
+      pedidos.then(function () {
+        if (estiloListo) montarCapasColombia();
+        intentarArrancar();
+      }).catch(function () {
+        /* Sin capas de Colombia el mapa base sigue siendo utilizable */
+        intentarArrancar();
+      });
+
+      map.on("error", function (e) {
+        var msg = (e && e.error && e.error.message) || "";
+        if (/terrarium|elevation-tiles/i.test(msg)) {
+          if (estado.demOk) {
+            estado.demOk = false;
+            SP.aviso("El servicio de elevación no responde; el visor sigue en 2D.");
+            try { map.setTerrain(null); } catch (err) { /* ignorar */ }
+          }
+        }
+      });
+
+      /* Red de seguridad: si algo externo se cuelga, no dejamos el cargador
+         puesto para siempre. */
+      setTimeout(SP.listo, 12000);
+    });
+  </script>
 </body>
 
 </html>

@@ -1,44 +1,436 @@
-<html>
+<!DOCTYPE html>
+<html lang="es">
 
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Geovisor - ArcGIS SDK</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Geovisor de Colombia · ArcGIS Maps SDK | Spatialis</title>
+  <meta name="description"
+    content="Geovisor web de Colombia con el ArcGIS Maps SDK for JavaScript: 33 departamentos, 72 ciudades con simbología proporcional y mapas base de Esri. Demo de Spatialis S.A.S.">
+  <meta name="color-scheme" content="dark">
+
+  <link rel="preconnect" href="https://js.arcgis.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.arcgis.com" crossorigin>
+  <link rel="preconnect" href="https://services.arcgisonline.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link rel="preload" href="data/colombia-departamentos.geojson" as="fetch" crossorigin>
+  <link rel="preload" href="data/colombia-ciudades.geojson" as="fetch" crossorigin>
 
   <style>
-    html,
-    body,
-    arcgis-map {
-      padding: 0;
-      margin: 0;
-      height: 100%;
-      width: 100%;
-    }
+    html,body{margin:0;height:100%;background:#060b17;color:#f8fafc}
   </style>
 
-
-
-  <!-- Load Calcite components from CDN -->
-  <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/2.13.2/calcite.css" />
-  <script type="module" src="https://js.arcgis.com/calcite-components/2.13.2/calcite.esm.js"></script>
-
-  <!-- Load the ArcGIS Maps SDK for JavaScript from CDN -->
-  <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css" />
+  <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/dark/main.css">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="assets/spatialis-ui.css">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <script src="https://js.arcgis.com/4.31/"></script>
-
-  <!-- Load Map components from CDN-->
-  <script type="module" src="https://js.arcgis.com/map-components/4.31/arcgis-map-components.esm.js"></script>
-
 </head>
 
 <body>
+  <div class="sp-app">
 
-  <arcgis-map center="-74.096153, 4.6482784" zoom="11">
+    <header class="sp-topbar">
+      <a class="sp-brand" href="index.html" title="Volver a los geovisores de Spatialis">
+        <span class="sp-brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+          </svg>
+        </span>
+        <span class="sp-brand__name">spatialis</span>
+      </a>
 
-    <arcgis-zoom position="bottom-right"></arcgis-zoom>
+      <span class="sp-topbar__divider" aria-hidden="true"></span>
 
-  </arcgis-map>
+      <div class="sp-topbar__title">
+        <h1>Geovisor de Colombia · ArcGIS</h1>
+        <p>Mapas base de Esri y capas GeoJSON propias</p>
+      </div>
 
+      <div class="sp-topbar__actions">
+        <span class="sp-badge sp-badge--meta"><span class="sp-badge__dot"></span>Sin API key</span>
+        <span class="sp-badge sp-badge--lib">ArcGIS Maps SDK 4.31</span>
+        <a class="sp-link sp-link--ghost" href="index.html">Otros visores</a>
+        <a class="sp-link" href="https://spatialis.co/#contacto" target="_blank" rel="noopener">Solicitar demo</a>
+      </div>
+    </header>
+
+    <div class="sp-stage">
+      <div id="map" role="application" aria-label="Mapa interactivo de Colombia"></div>
+
+      <aside class="sp-panel" data-open="false" aria-label="Controles del geovisor">
+        <span class="sp-panel__handle" aria-hidden="true"></span>
+        <button class="sp-panel__close" type="button" aria-label="Cerrar panel">&times;</button>
+
+        <div class="sp-panel__scroll">
+          <div class="sp-section">
+            <div class="sp-kpis">
+              <div class="sp-kpi">
+                <div class="sp-kpi__value" data-kpi="deptos">—</div>
+                <div class="sp-kpi__label">Departamentos</div>
+              </div>
+              <div class="sp-kpi">
+                <div class="sp-kpi__value" data-kpi="ciudades">—</div>
+                <div class="sp-kpi__label">Ciudades</div>
+              </div>
+              <div class="sp-kpi">
+                <div class="sp-kpi__value" data-kpi="poblacion">—</div>
+                <div class="sp-kpi__label">Hab. urbanos</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sp-section">
+            <h2 class="sp-section__title">Vistas guiadas</h2>
+            <div class="sp-chips" data-vistas>
+              <button class="sp-chip" type="button" data-vista="colombia" aria-pressed="true">Colombia</button>
+              <button class="sp-chip" type="button" data-vista="bogota">Bogotá</button>
+              <button class="sp-chip" type="button" data-vista="caribe">Caribe</button>
+              <button class="sp-chip" type="button" data-vista="eje">Eje Cafetero</button>
+            </div>
+          </div>
+
+          <div class="sp-section">
+            <h2 class="sp-section__title">Capas</h2>
+            <div class="sp-rows">
+              <label class="sp-row">
+                <input type="checkbox" id="cap-deptos" checked>
+                <span class="sp-swatch" style="background:rgba(0,113,197,.35);border-color:#00c7fd"></span>
+                <span class="sp-row__text">
+                  <span class="sp-row__name">Departamentos</span>
+                  <span class="sp-row__meta">GeoJSONLayer · 33 entidades</span>
+                </span>
+                <span class="sp-switch" aria-hidden="true"></span>
+              </label>
+              <label class="sp-row">
+                <input type="checkbox" id="cap-etiquetas" checked>
+                <span class="sp-row__text">
+                  <span class="sp-row__name">Etiquetas territoriales</span>
+                  <span class="sp-row__meta">LabelClass del SDK</span>
+                </span>
+                <span class="sp-switch" aria-hidden="true"></span>
+              </label>
+              <label class="sp-row">
+                <input type="checkbox" id="cap-ciudades" checked>
+                <span class="sp-swatch" style="background:#00c7fd"></span>
+                <span class="sp-row__text">
+                  <span class="sp-row__name">Ciudades</span>
+                  <span class="sp-row__meta">Símbolo proporcional a población</span>
+                </span>
+                <span class="sp-switch" aria-hidden="true"></span>
+              </label>
+            </div>
+          </div>
+
+          <details class="sp-section sp-fold">
+            <summary>Mapa base</summary>
+            <div class="sp-fold__body">
+              <div class="sp-chips" data-bases>
+                <button class="sp-chip" type="button" data-base="dark-gray-vector" aria-pressed="true">Oscuro</button>
+                <button class="sp-chip" type="button" data-base="topo-vector">Topográfico</button>
+                <button class="sp-chip" type="button" data-base="satellite">Satélite</button>
+              </div>
+            </div>
+          </details>
+
+          <details class="sp-section sp-fold">
+            <summary>Leyenda y fuentes</summary>
+            <div class="sp-fold__body">
+              <div class="sp-legend sp-legend--ciudades"></div>
+              <div class="sp-legend" style="margin-top:9px">
+                <div class="sp-legend__item">
+                  <span style="display:inline-grid;place-items:center;width:24px;flex:none">
+                    <span class="sp-legend__line"></span>
+                  </span>
+                  <span>Límite departamental</span>
+                </div>
+              </div>
+              <p class="sp-note" style="margin-top:11px">
+                Capas propias derivadas de <a href="https://www.naturalearthdata.com" target="_blank"
+                  rel="noopener">Natural Earth</a> (dominio público), servidas como GeoJSON estático. Mapas base de
+                Esri.
+              </p>
+            </div>
+          </details>
+        </div>
+      </aside>
+
+      <button class="sp-fab" type="button" aria-expanded="false" aria-label="Abrir panel de capas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round" aria-hidden="true">
+          <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
+          <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" />
+        </svg>
+        Capas
+      </button>
+
+      <div class="sp-info" data-open="false" role="status" aria-live="polite">
+        <div class="sp-info__head">
+          <div>
+            <p class="sp-info__kind"></p>
+            <h3 class="sp-info__title"></h3>
+          </div>
+          <button class="sp-info__close" type="button" aria-label="Cerrar ficha">&times;</button>
+        </div>
+        <div class="sp-info__body">
+          <dl class="sp-attrs"></dl>
+        </div>
+      </div>
+
+      <div class="sp-toast" data-open="false" role="alert">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fbbf24" stroke-width="2"
+          stroke-linecap="round" style="flex:none;margin-top:1px" aria-hidden="true">
+          <path d="M12 9v4M12 17h.01" />
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+        </svg>
+        <span class="sp-toast__msg"></span>
+      </div>
+
+      <div class="sp-statusbar">
+        <span class="sp-coords">—</span>
+        <span class="sp-statusbar__spacer"></span>
+        <span class="sp-attribution">
+          Esri · Natural Earth · <a href="https://spatialis.co" target="_blank" rel="noopener">spatialis.co</a>
+        </span>
+      </div>
+
+      <div class="sp-loader">
+        <div class="sp-loader__inner">
+          <span class="sp-loader__mark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+            </svg>
+          </span>
+          <div class="sp-loader__text">Cargando el SDK de ArcGIS…</div>
+          <div class="sp-loader__bar"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="assets/spatialis-ui.js" defer></script>
+
+  <script>
+    window.addEventListener("DOMContentLoaded", function () {
+      "use strict";
+
+      var VISTAS = {
+        colombia: { center: [-73.6, 4.3], zoom: 5 },
+        bogota: { center: [-74.08, 4.65], zoom: 9 },
+        caribe: { center: [-74.6, 10.7], zoom: 7 },
+        eje: { center: [-75.6, 4.9], zoom: 8 },
+      };
+
+      require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/GeoJSONLayer",
+        "esri/widgets/Zoom",
+        "esri/widgets/ScaleBar",
+      ], function (Map, MapView, GeoJSONLayer, Zoom, ScaleBar) {
+
+        /* Relleno translúcido + borde cian: el mismo tratamiento que en los
+           otros tres visores, para que la comparación sea justa. */
+        var rendererDeptos = {
+          type: "simple",
+          symbol: {
+            type: "simple-fill",
+            color: [0, 113, 197, 0.16],
+            outline: { color: SP.COLOR.limite, width: 1.2 },
+          },
+        };
+
+        /* Simbología proporcional con las mismas clases de SP.CLASES. */
+        var rendererCiudades = {
+          type: "simple",
+          symbol: {
+            type: "simple-marker",
+            style: "circle",
+            color: SP.COLOR.ciudad,
+            outline: { color: SP.COLOR.ciudadBorde, width: 1 },
+          },
+          visualVariables: [{
+            type: "size",
+            field: "poblacion",
+            stops: [
+              { value: 50000, size: SP.CLASES[3].radio * 2 },
+              { value: 100000, size: SP.CLASES[2].radio * 2 },
+              { value: 300000, size: SP.CLASES[1].radio * 2 },
+              { value: 1000000, size: SP.CLASES[0].radio * 2 },
+              { value: 8000000, size: (SP.CLASES[0].radio + 5) * 2 },
+            ],
+          }],
+        };
+
+        var etiquetasDeptos = [{
+          labelExpressionInfo: { expression: "Upper($feature.nombre)" },
+          symbol: {
+            type: "text",
+            color: "#cfe9f7",
+            haloColor: "#04070f",
+            haloSize: 1.4,
+            font: { size: 10, weight: "bold" },
+          },
+          labelPlacement: "always-horizontal",
+          maxScale: 1500000,
+        }];
+
+        var deptos = new GeoJSONLayer({
+          url: SP.DATA.departamentos,
+          title: "Departamentos",
+          renderer: rendererDeptos,
+          labelingInfo: etiquetasDeptos,
+          labelsVisible: true,
+          popupEnabled: false,
+          copyright: "Natural Earth · Spatialis S.A.S.",
+        });
+
+        /* Solo se rotulan las ciudades grandes: por debajo de 150 000
+           habitantes el texto tapa el propio simbolo. */
+        var etiquetasCiudades = [{
+          labelExpressionInfo: { expression: "$feature.nombre" },
+          where: "poblacion >= 150000",
+          symbol: {
+            type: "text",
+            color: "#ffffff",
+            haloColor: "#04070f",
+            haloSize: 1.3,
+            font: { size: 10.5 },
+            yoffset: -12,
+          },
+          labelPlacement: "above-center",
+        }];
+
+        var ciudades = new GeoJSONLayer({
+          url: SP.DATA.ciudades,
+          title: "Ciudades",
+          renderer: rendererCiudades,
+          labelingInfo: etiquetasCiudades,
+          labelsVisible: true,
+          popupEnabled: false,
+          copyright: "Natural Earth · Spatialis S.A.S.",
+        });
+
+        var mapa = new Map({ basemap: "dark-gray-vector", layers: [deptos, ciudades] });
+
+        var vista = new MapView({
+          container: "map",
+          map: mapa,
+          center: VISTAS.colombia.center,
+          zoom: VISTAS.colombia.zoom,
+          constraints: { minZoom: 3, rotationEnabled: false },
+          popupEnabled: false,
+          ui: { components: [] },
+        });
+
+        window.spView = vista;
+
+        vista.ui.add(new Zoom({ view: vista }), "top-right");
+        vista.ui.add(new ScaleBar({ view: vista, unit: "metric" }), "bottom-right");
+
+        /* ------------------------------------------------------ arranque */
+
+        vista.when(function () {
+          SP.listo();
+          return Promise.all([
+            deptos.queryFeatureCount().catch(function () { return 0; }),
+            ciudades.queryFeatures({ where: "1=1", outFields: ["poblacion"], returnGeometry: false })
+              .catch(function () { return { features: [] }; }),
+          ]);
+        }).then(function (res) {
+          SP.kpi("deptos", res[0] || "—");
+          var fs = res[1].features || [];
+          SP.kpi("ciudades", fs.length || "—");
+          var hab = fs.reduce(function (a, f) { return a + (f.attributes.poblacion || 0); }, 0);
+          SP.kpi("poblacion", hab ? (hab / 1e6).toFixed(1).replace(".", ",") + " M" : "—");
+        }).catch(function (e) {
+          SP.listo();
+          SP.aviso("No se pudieron cargar las capas de Colombia: " + (e && e.message ? e.message : e));
+        });
+
+        /* --------------------------------------------------- interacción */
+
+        vista.on("pointer-move", function (ev) {
+          var p = vista.toMap({ x: ev.x, y: ev.y });
+          if (p) SP.coordenadas(p.longitude, p.latitude);
+        });
+
+        vista.on("click", function (ev) {
+          vista.hitTest(ev, { include: [ciudades, deptos] }).then(function (r) {
+            var res = (r.results || []).filter(function (x) { return x.graphic && x.graphic.attributes; });
+            if (!res.length) { SP.ficha.cerrar(); return; }
+
+            /* hitTest devuelve primero lo que está encima: la ciudad gana */
+            var g = res[0].graphic;
+            var a = g.attributes;
+
+            if (a.poblacion !== undefined && a.poblacion !== null) {
+              SP.ficha.mostrar(a.nombre, a.capital === 1 ? "Capital · " + a.rango : a.rango, [
+                ["Departamento", a.departamento || "—"],
+                ["Población", SP.entero(a.poblacion)],
+                ["Longitud", ev.mapPoint.longitude.toFixed(4) + "°"],
+                ["Latitud", ev.mapPoint.latitude.toFixed(4) + "°"],
+              ]);
+            } else {
+              SP.ficha.mostrar(a.nombre, a.tipo || "Departamento", [
+                ["Código ISO", a.iso || "—"],
+                ["Longitud", ev.mapPoint.longitude.toFixed(4) + "°"],
+                ["Latitud", ev.mapPoint.latitude.toFixed(4) + "°"],
+              ]);
+            }
+          });
+        });
+
+        /* ----------------------------------------------------- controles */
+
+        document.getElementById("cap-deptos").addEventListener("change", function () {
+          deptos.visible = this.checked;
+        });
+
+        document.getElementById("cap-etiquetas").addEventListener("change", function () {
+          deptos.labelsVisible = this.checked;
+        });
+
+        document.getElementById("cap-ciudades").addEventListener("change", function () {
+          ciudades.visible = this.checked;
+        });
+
+        document.querySelectorAll("[data-vista]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var v = VISTAS[btn.dataset.vista];
+            if (!v) return;
+            document.querySelectorAll("[data-vista]").forEach(function (b) {
+              b.setAttribute("aria-pressed", String(b === btn));
+            });
+            vista.goTo({ center: v.center, zoom: v.zoom }, { duration: 1400, easing: "out-expo" });
+            SP.ficha.cerrar();
+          });
+        });
+
+        document.querySelectorAll("[data-base]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            document.querySelectorAll("[data-base]").forEach(function (b) {
+              b.setAttribute("aria-pressed", String(b === btn));
+            });
+            mapa.basemap = btn.dataset.base;
+          });
+        });
+      }, function (err) {
+        SP.listo();
+        SP.aviso("No se pudo cargar el SDK de ArcGIS: " + (err && err.message ? err.message : err));
+      });
+
+      setTimeout(SP.listo, 15000);
+    });
+  </script>
 </body>
 
 </html>

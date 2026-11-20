@@ -1,48 +1,521 @@
-<html>
+<!DOCTYPE html>
+<html lang="es">
 
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Geovisor - Leaflet</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Geovisor de Colombia · Leaflet | Spatialis</title>
+  <meta name="description"
+    content="Geovisor web ligero de Colombia con Leaflet: 33 departamentos, 72 ciudades con simbología proporcional y teselas sin API key. Demo de Spatialis S.A.S.">
+  <meta name="color-scheme" content="dark">
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <link rel="preload" href="data/colombia-departamentos.geojson" as="fetch" crossorigin>
+  <link rel="preload" href="data/colombia-ciudades.geojson" as="fetch" crossorigin>
 
   <style>
-    html,
-    body {
-      height: 100%;
-      margin: 0;
-    }
-
-    .leaflet-container {
-      height: 100%;
-      width: 100%;
-      max-width: 100%;
-      max-height: 100%;
-    }
+    html,body{margin:0;height:100%;background:#060b17;color:#f8fafc}
   </style>
 
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="assets/spatialis-ui.css">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+
+  <style>
+    /* Rotulos propios: Leaflet no trae motor de etiquetas, asi que se
+       resuelven con tooltips permanentes sin caja ni flecha. */
+    .sp-rotulo {
+      background: none;
+      border: 0;
+      box-shadow: none;
+      padding: 0;
+      font-family: var(--sp-font);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #cfe9f7;
+      text-shadow: 0 0 3px #04070f, 0 0 3px #04070f, 0 1px 2px #04070f;
+      white-space: nowrap;
+    }
+
+    .sp-rotulo::before { display: none !important; }
+
+    .sp-rotulo--ciudad {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+      color: #ffffff;
+    }
+  </style>
 </head>
 
 <body>
-  <div id="map"></div>
+  <div class="sp-app">
 
-  <script>
+    <header class="sp-topbar">
+      <a class="sp-brand" href="index.html" title="Volver a los geovisores de Spatialis">
+        <span class="sp-brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+          </svg>
+        </span>
+        <span class="sp-brand__name">spatialis</span>
+      </a>
 
-    const map = L.map('map', {
-      center: [4.663346, -74.100723],
-      zoom: 11
+      <span class="sp-topbar__divider" aria-hidden="true"></span>
+
+      <div class="sp-topbar__title">
+        <h1>Geovisor de Colombia · Leaflet</h1>
+        <p>Visor ligero: 45 KB de librería y teselas abiertas</p>
+      </div>
+
+      <div class="sp-topbar__actions">
+        <span class="sp-badge sp-badge--meta"><span class="sp-badge__dot"></span>Sin API key</span>
+        <span class="sp-badge sp-badge--lib">Leaflet 1.9.4</span>
+        <a class="sp-link sp-link--ghost" href="index.html">Otros visores</a>
+        <a class="sp-link" href="https://spatialis.co/#contacto" target="_blank" rel="noopener">Solicitar demo</a>
+      </div>
+    </header>
+
+    <div class="sp-stage">
+      <div id="map" role="application" aria-label="Mapa interactivo de Colombia"></div>
+
+      <aside class="sp-panel" data-open="false" aria-label="Controles del geovisor">
+        <span class="sp-panel__handle" aria-hidden="true"></span>
+        <button class="sp-panel__close" type="button" aria-label="Cerrar panel">&times;</button>
+
+        <div class="sp-panel__scroll">
+          <div class="sp-section">
+            <div class="sp-kpis">
+              <div class="sp-kpi">
+                <div class="sp-kpi__value" data-kpi="deptos">—</div>
+                <div class="sp-kpi__label">Departamentos</div>
+              </div>
+              <div class="sp-kpi">
+                <div class="sp-kpi__value" data-kpi="ciudades">—</div>
+                <div class="sp-kpi__label">Ciudades</div>
+              </div>
+              <div class="sp-kpi">
+                <div class="sp-kpi__value" data-kpi="poblacion">—</div>
+                <div class="sp-kpi__label">Hab. urbanos</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sp-section">
+            <h2 class="sp-section__title">Vistas guiadas</h2>
+            <div class="sp-chips" data-vistas>
+              <button class="sp-chip" type="button" data-vista="colombia" aria-pressed="true">Colombia</button>
+              <button class="sp-chip" type="button" data-vista="bogota">Bogotá</button>
+              <button class="sp-chip" type="button" data-vista="caribe">Caribe</button>
+              <button class="sp-chip" type="button" data-vista="eje">Eje Cafetero</button>
+            </div>
+          </div>
+
+          <div class="sp-section">
+            <h2 class="sp-section__title">Capas</h2>
+            <div class="sp-rows">
+              <label class="sp-row">
+                <input type="checkbox" id="cap-deptos" checked>
+                <span class="sp-swatch" style="background:rgba(0,113,197,.35);border-color:#00c7fd"></span>
+                <span class="sp-row__text">
+                  <span class="sp-row__name">Departamentos</span>
+                  <span class="sp-row__meta">L.geoJSON · 33 entidades</span>
+                </span>
+                <span class="sp-switch" aria-hidden="true"></span>
+              </label>
+              <label class="sp-row">
+                <input type="checkbox" id="cap-etiquetas" checked>
+                <span class="sp-row__text">
+                  <span class="sp-row__name">Etiquetas territoriales</span>
+                  <span class="sp-row__meta">Tooltips permanentes</span>
+                </span>
+                <span class="sp-switch" aria-hidden="true"></span>
+              </label>
+              <label class="sp-row">
+                <input type="checkbox" id="cap-ciudades" checked>
+                <span class="sp-swatch" style="background:#00c7fd"></span>
+                <span class="sp-row__text">
+                  <span class="sp-row__name">Ciudades</span>
+                  <span class="sp-row__meta">circleMarker proporcional</span>
+                </span>
+                <span class="sp-switch" aria-hidden="true"></span>
+              </label>
+            </div>
+          </div>
+
+          <details class="sp-section sp-fold">
+            <summary>Mapa base</summary>
+            <div class="sp-fold__body">
+              <div class="sp-chips" data-bases>
+                <button class="sp-chip" type="button" data-base="oscuro" aria-pressed="true">Oscuro</button>
+                <button class="sp-chip" type="button" data-base="satelite">Satélite</button>
+                <button class="sp-chip" type="button" data-base="calles">Calles</button>
+              </div>
+            </div>
+          </details>
+
+          <details class="sp-section sp-fold">
+            <summary>Leyenda y fuentes</summary>
+            <div class="sp-fold__body">
+              <div class="sp-legend sp-legend--ciudades"></div>
+              <div class="sp-legend" style="margin-top:9px">
+                <div class="sp-legend__item">
+                  <span style="display:inline-grid;place-items:center;width:24px;flex:none">
+                    <span class="sp-legend__line"></span>
+                  </span>
+                  <span>Límite departamental</span>
+                </div>
+              </div>
+              <p class="sp-note" style="margin-top:11px">
+                Capas propias derivadas de <a href="https://www.naturalearthdata.com" target="_blank"
+                  rel="noopener">Natural Earth</a> (dominio público). Teselas de Esri (World Dark Gray Canvas y
+                World Imagery) y OpenStreetMap, todas de acceso anónimo.
+              </p>
+            </div>
+          </details>
+        </div>
+      </aside>
+
+      <button class="sp-fab" type="button" aria-expanded="false" aria-label="Abrir panel de capas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round" aria-hidden="true">
+          <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
+          <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" />
+        </svg>
+        Capas
+      </button>
+
+      <div class="sp-info" data-open="false" role="status" aria-live="polite">
+        <div class="sp-info__head">
+          <div>
+            <p class="sp-info__kind"></p>
+            <h3 class="sp-info__title"></h3>
+          </div>
+          <button class="sp-info__close" type="button" aria-label="Cerrar ficha">&times;</button>
+        </div>
+        <div class="sp-info__body">
+          <dl class="sp-attrs"></dl>
+        </div>
+      </div>
+
+      <div class="sp-toast" data-open="false" role="alert">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fbbf24" stroke-width="2"
+          stroke-linecap="round" style="flex:none;margin-top:1px" aria-hidden="true">
+          <path d="M12 9v4M12 17h.01" />
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+        </svg>
+        <span class="sp-toast__msg"></span>
+      </div>
+
+      <div class="sp-statusbar">
+        <span class="sp-coords">—</span>
+        <span class="sp-statusbar__spacer"></span>
+        <span class="sp-attribution">
+          Esri · © OpenStreetMap · Natural Earth · <a href="https://spatialis.co" target="_blank"
+            rel="noopener">spatialis.co</a>
+        </span>
+      </div>
+
+      <div class="sp-loader">
+        <div class="sp-loader__inner">
+          <span class="sp-loader__mark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+            </svg>
+          </span>
+          <div class="sp-loader__text">Cargando cartografía de Colombia…</div>
+          <div class="sp-loader__bar"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
+  <script src="assets/spatialis-ui.js" defer></script>
+
+  <script defer>
+    window.addEventListener("DOMContentLoaded", function () {
+      "use strict";
+
+      var VISTAS = {
+        colombia: { centro: [4.3, -73.6], zoom: 5 },
+        bogota: { centro: [4.65, -74.08], zoom: 9 },
+        caribe: { centro: [10.7, -74.6], zoom: 7 },
+        eje: { centro: [4.9, -75.6], zoom: 8 },
+      };
+
+      /* Teselas abiertas y sin clave. CARTO dejo de servir sus mapas base de
+         forma anonima, asi que el fondo oscuro sale del servicio publico de
+         Esri, que si admite acceso anonimo. */
+      var ESRI = "https://services.arcgisonline.com/ArcGIS/rest/services/";
+      var BASES = {
+        oscuro: {
+          url: ESRI + "Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+          opciones: { maxZoom: 16 },
+          referencia: ESRI + "Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
+        },
+        satelite: {
+          url: ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          opciones: { maxZoom: 19 },
+          referencia: ESRI + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+        },
+        calles: {
+          url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+          opciones: { maxZoom: 19 },
+        },
+      };
+
+      var incrustado = window.self !== window.top;
+
+      var map = L.map("map", {
+        center: VISTAS.colombia.centro,
+        zoom: VISTAS.colombia.zoom,
+        minZoom: 3,
+        zoomControl: false,
+        attributionControl: false,
+        /* Embebido en la web, la rueda haria scroll del mapa en vez de la
+           pagina; con Ctrl se activa el zoom. */
+        scrollWheelZoom: !incrustado,
+      });
+
+      window.spMap = map;
+
+      if (incrustado) {
+        map.on("wheel", function (e) {
+          if (e.originalEvent.ctrlKey) {
+            L.DomEvent.preventDefault(e.originalEvent);
+            map.setZoom(map.getZoom() - Math.sign(e.originalEvent.deltaY) * 0.5);
+          }
+        });
+      }
+
+      L.control.zoom({ position: "topright" }).addTo(map);
+      L.control.scale({ position: "bottomright", imperial: false, maxWidth: 110 }).addTo(map);
+
+      var baseActual = null;
+
+      function ponerBase(clave) {
+        var b = BASES[clave];
+        if (!b) return;
+        if (baseActual) baseActual.forEach(function (c) { map.removeLayer(c); });
+        baseActual = [L.tileLayer(b.url, b.opciones).addTo(map)];
+        if (b.referencia) {
+          baseActual.push(L.tileLayer(b.referencia, b.opciones).addTo(map));
+        }
+        baseActual.forEach(function (c) { c.bringToBack(); });
+      }
+
+      ponerBase("oscuro");
+
+      /* ------------------------------------------------------------ capas */
+
+      var capaDeptos = L.geoJSON(null, {
+        style: function () {
+          return {
+            color: SP.COLOR.limite,
+            weight: 1.2,
+            opacity: .85,
+            fillColor: SP.COLOR.relleno,
+            fillOpacity: .14,
+          };
+        },
+        onEachFeature: function (f, capa) {
+          capa.on({
+            mouseover: function () {
+              capa.setStyle({ weight: 2.2, fillOpacity: .4, fillColor: "#2b8fd6" });
+              capa.bringToFront();
+            },
+            mouseout: function () { capaDeptos.resetStyle(capa); },
+            click: function (e) {
+              L.DomEvent.stopPropagation(e);
+              var p = f.properties;
+              SP.ficha.mostrar(p.nombre, p.tipo, [
+                ["Código ISO", p.iso || "—"],
+                ["Longitud", e.latlng.lng.toFixed(4) + "°"],
+                ["Latitud", e.latlng.lat.toFixed(4) + "°"],
+              ]);
+            },
+          });
+        },
+      });
+
+      var capaEtiquetas = L.layerGroup();
+      var capaCiudades = L.geoJSON(null, {
+        pointToLayer: function (f, latlng) {
+          var p = f.properties;
+          return L.circleMarker(latlng, {
+            radius: SP.radioCiudad(p.poblacion),
+            color: p.capital === 1 ? SP.COLOR.capital : SP.COLOR.ciudadBorde,
+            weight: p.capital === 1 ? 2 : 1,
+            opacity: .9,
+            fillColor: SP.COLOR.ciudad,
+            fillOpacity: .92,
+          });
+        },
+        onEachFeature: function (f, capa) {
+          var p = f.properties;
+          if (p.poblacion >= 150000) {
+            capa.bindTooltip(p.nombre, {
+              permanent: true,
+              direction: "bottom",
+              offset: [0, SP.radioCiudad(p.poblacion) + 2],
+              className: "sp-rotulo sp-rotulo--ciudad",
+            });
+            /* mismo escalonado que en los departamentos, por poblacion */
+            rotulosCiudad.push({
+              capa: capa,
+              minZoom: p.poblacion >= 1000000 ? 6 : p.poblacion >= 300000 ? 8 : 9,
+            });
+          }
+          capa.on("click", function (e) {
+            L.DomEvent.stopPropagation(e);
+            SP.ficha.mostrar(p.nombre, p.capital === 1 ? "Capital · " + p.rango : p.rango, [
+              ["Departamento", p.departamento || "—"],
+              ["Población", SP.entero(p.poblacion)],
+              ["Longitud", f.geometry.coordinates[0].toFixed(4) + "°"],
+              ["Latitud", f.geometry.coordinates[1].toFixed(4) + "°"],
+            ]);
+          });
+        },
+      });
+
+      /* Leaflet no trae motor de colision de etiquetas: si se rotulan los 33
+         departamentos a escala nacional, los andinos se pisan unos a otros.
+         Cada rotulo recibe un zoom minimo derivado de la extension real del
+         departamento, de forma que los grandes se ven desde el principio y
+         los pequenos aparecen al acercarse. */
+      var rotulos = [];
+      var rotulosCiudad = [];
+
+      function extensionGrados(geom) {
+        var minX = 180, maxX = -180, minY = 90, maxY = -90;
+        (function recorrer(c) {
+          if (typeof c[0] === "number") {
+            if (c[0] < minX) minX = c[0];
+            if (c[0] > maxX) maxX = c[0];
+            if (c[1] < minY) minY = c[1];
+            if (c[1] > maxY) maxY = c[1];
+          } else {
+            for (var i = 0; i < c.length; i++) recorrer(c[i]);
+          }
+        })(geom.coordinates);
+        return Math.max(maxX - minX, maxY - minY);
+      }
+
+      function montarEtiquetas(fc) {
+        fc.features.forEach(function (f) {
+          var c = f.properties.centroide;
+          if (!c) return;
+          var ancho = extensionGrados(f.geometry);
+          var minZoom = ancho >= 3.5 ? 5 : ancho >= 2 ? 6 : ancho >= 1.2 ? 7 : 8;
+          var marca = L.marker([c[1], c[0]], {
+            interactive: false,
+            keyboard: false,
+            icon: L.divIcon({ className: "", html: "", iconSize: [0, 0] }),
+          }).bindTooltip(f.properties.nombre.toUpperCase(), {
+            permanent: true,
+            direction: "center",
+            className: "sp-rotulo",
+          });
+          rotulos.push({ marca: marca, minZoom: minZoom, puesto: false });
+        });
+      }
+
+      function ajustarEtiquetas() {
+        var z = map.getZoom();
+        rotulos.forEach(function (r) {
+          var debe = z >= r.minZoom;
+          if (debe === r.puesto) return;
+          debe ? capaEtiquetas.addLayer(r.marca) : capaEtiquetas.removeLayer(r.marca);
+          r.puesto = debe;
+        });
+        rotulosCiudad.forEach(function (r) {
+          z >= r.minZoom ? r.capa.openTooltip() : r.capa.closeTooltip();
+        });
+      }
+
+      map.on("zoomend", ajustarEtiquetas);
+
+      Promise.all([
+        SP.cargarJSON(SP.DATA.departamentos),
+        SP.cargarJSON(SP.DATA.ciudades),
+      ]).then(function (res) {
+        capaDeptos.addData(res[0]).addTo(map);
+        capaCiudades.addData(res[1]).addTo(map);
+
+        montarEtiquetas(res[0]);
+        capaEtiquetas.addTo(map);
+        ajustarEtiquetas();
+
+        SP.kpi("deptos", res[0].features.length);
+        SP.kpi("ciudades", res[1].features.length);
+        var hab = res[1].features.reduce(function (a, f) { return a + (f.properties.poblacion || 0); }, 0);
+        SP.kpi("poblacion", (hab / 1e6).toFixed(1).replace(".", ",") + " M");
+        SP.listo();
+      }).catch(function (e) {
+        SP.listo();
+        SP.aviso("No se pudieron cargar las capas de Colombia: " + e.message);
+      });
+
+      /* ----------------------------------------------------- interacción */
+
+      map.on("mousemove", function (e) { SP.coordenadas(e.latlng.lng, e.latlng.lat); });
+      map.on("click", function () { SP.ficha.cerrar(); });
+
+      /* ------------------------------------------------------- controles */
+
+      document.getElementById("cap-deptos").addEventListener("change", function () {
+        this.checked ? capaDeptos.addTo(map) : map.removeLayer(capaDeptos);
+      });
+
+      document.getElementById("cap-etiquetas").addEventListener("change", function () {
+        this.checked ? capaEtiquetas.addTo(map) : map.removeLayer(capaEtiquetas);
+      });
+
+      document.getElementById("cap-ciudades").addEventListener("change", function () {
+        this.checked ? capaCiudades.addTo(map) : map.removeLayer(capaCiudades);
+      });
+
+      document.querySelectorAll("[data-vista]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var v = VISTAS[btn.dataset.vista];
+          if (!v) return;
+          document.querySelectorAll("[data-vista]").forEach(function (b) {
+            b.setAttribute("aria-pressed", String(b === btn));
+          });
+          map.flyTo(v.centro, v.zoom, { duration: 1.4 });
+          SP.ficha.cerrar();
+        });
+      });
+
+      document.querySelectorAll("[data-base]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          if (!BASES[btn.dataset.base]) return;
+          document.querySelectorAll("[data-base]").forEach(function (x) {
+            x.setAttribute("aria-pressed", String(x === btn));
+          });
+          ponerBase(btn.dataset.base);
+        });
+      });
+
+      setTimeout(SP.listo, 12000);
     });
-
-    const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    }).addTo(map);
-
   </script>
 </body>
 

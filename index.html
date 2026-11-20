@@ -1,41 +1,683 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Geovisores | Spatialis S.A.S.</title>
-<meta name="description" content="Demos de geovisores web con ArcGIS, Leaflet, MapLibre y OpenLayers.">
-<style>
-:root{--bg:#f6f8fa;--fg:#1f2328;--muted:#59636e;--card:#fff;--line:#d1d9e0;--accent:#0b6e75}
-@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--card:#161b22;--line:#30363d;--accent:#4fc3cc}}
-*{box-sizing:border-box}
-body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--fg);line-height:1.5}
-main{max-width:760px;margin:0 auto;padding:48px 20px}
-h1{margin:0 0 8px;font-size:1.9rem}
-.lead{margin:0 0 32px;color:var(--muted)}
-.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
-a.card{display:block;padding:18px;background:var(--card);border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none}
-a.card:hover{border-color:var(--accent)}
-a.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-a.card strong{display:block;font-size:1.1rem;color:var(--accent)}
-a.card span{color:var(--muted);font-size:.92rem}
-footer{margin-top:40px;color:var(--muted);font-size:.9rem}
-footer a{color:var(--accent)}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Geovisores web de Colombia | Spatialis S.A.S.</title>
+  <meta name="description"
+    content="Cuatro geovisores web de Colombia construidos con MapLibre, ArcGIS Maps SDK, Leaflet y OpenLayers: terreno 3D, datos abiertos y cartografía lista para producción. Demos de Spatialis S.A.S.">
+  <meta name="color-scheme" content="dark">
+  <meta property="og:title" content="Geovisores web de Colombia · Spatialis">
+  <meta property="og:description"
+    content="El mismo mapa de Colombia con cuatro librerías distintas, para comparar capacidades y rendimiento.">
+  <meta property="og:type" content="website">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <style>
+    html,body{margin:0;background:#060b17;color:#f8fafc}
+  </style>
+
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="assets/spatialis-ui.css">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+
+  <style>
+    /* La hoja compartida esta pensada para un visor a pantalla completa;
+       aqui recuperamos el desplazamiento normal de una pagina. */
+    html, body { height: auto; overflow: visible; }
+    body { overflow-x: hidden; }
+
+    .pagina {
+      position: relative;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pagina__fondo {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(90% 60% at 50% -10%, rgba(0, 113, 197, .22) 0%, transparent 60%),
+        linear-gradient(to bottom, #081021 0%, #060b17 55%);
+    }
+
+    .pagina__rejilla {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-size: 48px 48px;
+      background-image:
+        linear-gradient(to right, rgba(0, 113, 197, .07) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 113, 197, .07) 1px, transparent 1px);
+      mask-image: radial-gradient(80% 55% at 50% 0%, #000 0%, transparent 75%);
+    }
+
+    .contenido {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px;
+      flex: 1;
+    }
+
+    .sp-topbar--pagina {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      height: 60px;
+    }
+
+    /* ------------------------------------------------------------- hero */
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr);
+      gap: 40px;
+      align-items: center;
+      padding: 72px 0 56px;
+    }
+
+    .hero__eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 18px;
+      padding: 5px 12px;
+      border: 1px solid rgba(0, 199, 253, .3);
+      border-radius: 999px;
+      background: rgba(0, 199, 253, .07);
+      color: var(--sp-cyan);
+      font-size: 11.5px;
+      font-weight: 500;
+      letter-spacing: .04em;
+    }
+
+    .hero h1 {
+      margin: 0 0 16px;
+      font-size: clamp(2rem, 5vw, 3.1rem);
+      line-height: 1.08;
+      letter-spacing: -.035em;
+      font-weight: 700;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(100deg, var(--sp-cyan), #7dd3fc 55%, var(--sp-blue));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero p {
+      margin: 0 0 26px;
+      max-width: 54ch;
+      font-size: 1.02rem;
+      line-height: 1.65;
+      color: var(--sp-muted);
+    }
+
+    .hero__acciones { display: flex; flex-wrap: wrap; gap: 10px; }
+
+    .boton {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 44px;
+      padding: 0 20px;
+      border-radius: 9px;
+      border: 1px solid transparent;
+      background: var(--sp-blue);
+      color: #fff;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 160ms var(--sp-ease), transform 160ms var(--sp-ease);
+    }
+
+    .boton:hover { background: #008be3; transform: translateY(-1px); }
+    .boton:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+
+    .boton--fantasma {
+      background: transparent;
+      border-color: var(--sp-border);
+      color: var(--sp-text);
+    }
+
+    .boton--fantasma:hover { background: var(--sp-surface); border-color: var(--sp-faint); }
+
+    .hero__mapa {
+      position: relative;
+      display: grid;
+      place-items: center;
+      color: rgba(0, 199, 253, .42);
+    }
+
+    .hero__mapa svg {
+      width: 100%;
+      max-width: 260px;
+      height: auto;
+      filter: drop-shadow(0 0 22px rgba(0, 199, 253, .3));
+    }
+
+    /* ------------------------------------------------------------ tarjetas */
+
+    .seccion__titulo {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin: 0 0 6px;
+      font-size: 1.28rem;
+      font-weight: 600;
+      letter-spacing: -.02em;
+    }
+
+    .seccion__nota {
+      margin: 0 0 24px;
+      color: var(--sp-muted);
+      font-size: .94rem;
+    }
+
+    .tarjetas {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(258px, 1fr));
+      gap: 16px;
+      padding-bottom: 8px;
+    }
+
+    .tarjeta {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      border: 1px solid var(--sp-border);
+      border-radius: 14px;
+      background: linear-gradient(170deg, rgba(17, 30, 56, .85), rgba(10, 20, 38, .85));
+      color: inherit;
+      text-decoration: none;
+      overflow: hidden;
+      transition: border-color 200ms var(--sp-ease), transform 220ms var(--sp-ease),
+        box-shadow 220ms var(--sp-ease);
+    }
+
+    .tarjeta::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      background: radial-gradient(70% 50% at 80% 0%, rgba(0, 199, 253, .14), transparent 70%);
+      opacity: 0;
+      transition: opacity 240ms var(--sp-ease);
+    }
+
+    .tarjeta:hover {
+      border-color: rgba(0, 199, 253, .55);
+      transform: translateY(-3px);
+      box-shadow: 0 18px 40px -22px rgba(0, 0, 0, .9);
+    }
+
+    .tarjeta:hover::after { opacity: 1; }
+    .tarjeta:focus-visible { outline: none; box-shadow: var(--sp-ring); }
+
+    .tarjeta--destacada {
+      grid-column: span 2;
+      border-color: rgba(0, 199, 253, .42);
+      background:
+        radial-gradient(120% 90% at 100% 0%, rgba(0, 113, 197, .3), transparent 62%),
+        linear-gradient(170deg, rgba(17, 30, 56, .9), rgba(10, 20, 38, .9));
+    }
+
+    .tarjeta__cinta {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--sp-cyan);
+      color: #04121c;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .tarjeta__lib {
+      font-family: var(--sp-mono);
+      font-size: 11px;
+      color: var(--sp-cyan);
+      letter-spacing: .02em;
+    }
+
+    .tarjeta h3 {
+      margin: 8px 0 7px;
+      font-size: 1.16rem;
+      font-weight: 600;
+      letter-spacing: -.02em;
+    }
+
+    .tarjeta p {
+      margin: 0 0 16px;
+      font-size: .9rem;
+      line-height: 1.6;
+      color: var(--sp-muted);
+      flex: 1;
+    }
+
+    .etiquetas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+
+    .etiqueta {
+      padding: 3px 9px;
+      border: 1px solid var(--sp-border);
+      border-radius: 999px;
+      background: rgba(6, 11, 23, .5);
+      font-size: 10.5px;
+      color: var(--sp-muted);
+    }
+
+    .tarjeta__cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--sp-cyan);
+    }
+
+    .tarjeta__cta svg { width: 14px; height: 14px; transition: transform 200ms var(--sp-ease); }
+    .tarjeta:hover .tarjeta__cta svg { transform: translateX(3px); }
+
+    /* ------------------------------------------------------------ bandas */
+
+    .capacidades {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1px;
+      margin: 56px 0 8px;
+      border: 1px solid var(--sp-border);
+      border-radius: 14px;
+      background: var(--sp-border);
+      overflow: hidden;
+    }
+
+    .capacidad { padding: 20px; background: var(--sp-surface); }
+
+    .capacidad__icono {
+      width: 32px;
+      height: 32px;
+      margin-bottom: 12px;
+      display: grid;
+      place-items: center;
+      border-radius: 9px;
+      background: rgba(0, 199, 253, .1);
+      color: var(--sp-cyan);
+    }
+
+    .capacidad__icono svg { width: 17px; height: 17px; }
+
+    .capacidad h4 {
+      margin: 0 0 5px;
+      font-size: .95rem;
+      font-weight: 600;
+    }
+
+    .capacidad p {
+      margin: 0;
+      font-size: .85rem;
+      line-height: 1.55;
+      color: var(--sp-muted);
+    }
+
+    .cierre {
+      margin: 56px 0 72px;
+      padding: 34px;
+      border: 1px solid var(--sp-border);
+      border-radius: 16px;
+      background:
+        radial-gradient(100% 140% at 0% 0%, rgba(0, 113, 197, .3), transparent 60%),
+        var(--sp-surface);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .cierre__texto { flex: 1; min-width: 240px; }
+
+    .cierre h2 {
+      margin: 0 0 7px;
+      font-size: 1.35rem;
+      font-weight: 600;
+      letter-spacing: -.02em;
+    }
+
+    .cierre p { margin: 0; color: var(--sp-muted); font-size: .93rem; line-height: 1.6; }
+
+    .pie {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--sp-border);
+      padding: 22px 0;
+      font-size: .83rem;
+      color: var(--sp-faint);
+    }
+
+    .pie__fila {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      align-items: center;
+    }
+
+    .pie a { color: var(--sp-muted); text-decoration: none; }
+    .pie a:hover { color: var(--sp-cyan); }
+    .pie__sep { margin-left: auto; }
+
+    @media (max-width: 760px) {
+      .hero {
+        grid-template-columns: 1fr;
+        gap: 26px;
+        padding: 44px 0 36px;
+      }
+
+      .hero__mapa { order: -1; }
+      .hero__mapa svg { max-width: 170px; }
+      .tarjeta--destacada { grid-column: span 1; }
+      .contenido { padding: 0 18px; }
+      .cierre { padding: 24px; margin: 40px 0 52px; }
+    }
+  </style>
 </head>
+
 <body>
-<main>
-<h1>Geovisores</h1>
-<p class="lead">El mismo mapa de Bogotá con cuatro librerías de mapas distintas. Demos de Spatialis S.A.S.</p>
-<div class="grid">
-<a class="card" href="arcgis.html"><strong>ArcGIS Maps SDK</strong><span>Componentes web de Esri, versión 4.31</span></a>
-<a class="card" href="leaflet.html"><strong>Leaflet</strong><span>Versión 1.9.4 con mapa base de OpenStreetMap</span></a>
-<a class="card" href="maplibre.html"><strong>MapLibre GL JS</strong><span>Versión 5.0.1 con estilo vectorial de OpenFreeMap</span></a>
-<a class="card" href="openlayers.html"><strong>OpenLayers</strong><span>Versión 10.3.1 con mapa base de OpenStreetMap</span></a>
-</div>
-<footer>
-<p><a href="https://spatialis.com.co">spatialis.com.co</a> · <a href="https://github.com/spatialis-co/geovisores">Repositorio en GitHub</a> · <a href="../aplicaciones/">Más demos: aplicaciones</a></p>
-</footer>
-</main>
+  <div class="pagina">
+    <div class="pagina__fondo" aria-hidden="true"></div>
+    <div class="pagina__rejilla" aria-hidden="true"></div>
+
+    <header class="sp-topbar sp-topbar--pagina">
+      <a class="sp-brand" href="https://spatialis.co">
+        <span class="sp-brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+          </svg>
+        </span>
+        <span class="sp-brand__name">spatialis</span>
+      </a>
+
+      <span class="sp-topbar__divider" aria-hidden="true"></span>
+
+      <div class="sp-topbar__title">
+        <h1>Geovisores de demostración</h1>
+        <p>Portafolio técnico de Spatialis S.A.S.</p>
+      </div>
+
+      <div class="sp-topbar__actions">
+        <a class="sp-link sp-link--ghost" href="https://spatialis.co" target="_blank" rel="noopener">spatialis.co</a>
+        <a class="sp-link" href="https://spatialis.co/#contacto" target="_blank" rel="noopener">Solicitar demo</a>
+      </div>
+    </header>
+
+    <main class="contenido">
+
+      <section class="hero">
+        <div>
+          <span class="hero__eyebrow">
+            <span class="sp-badge__dot"></span>
+            Cuatro librerías · un mismo mapa de Colombia
+          </span>
+          <h1>Geovisores web que se <em>abren en segundos</em> y se ven bien en cualquier pantalla.</h1>
+          <p>
+            Construimos el mismo mapa de Colombia —33 departamentos y 72 ciudades con datos abiertos— sobre las
+            cuatro librerías que más se usan en proyectos SIG. Sirve para comparar capacidades, rendimiento y
+            costo de licenciamiento antes de decidir la arquitectura de su plataforma.
+          </p>
+          <div class="hero__acciones">
+            <a class="boton" href="maplibre.html">
+              Ver el visor 3D
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </a>
+            <a class="boton boton--fantasma" href="https://spatialis.co/#contacto" target="_blank"
+              rel="noopener">Hablar con un especialista</a>
+          </div>
+        </div>
+
+        <div class="hero__mapa" aria-hidden="true">
+          <svg class="hero__silueta" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 300" fill="none" stroke="currentColor" stroke-width="1" stroke-linejoin="round">
+<g>
+<path d="M173.4,246.2 L163.6,300 L157.4,292.7 L154.1,293.6 L149.8,291.8 L162.1,272.7 L161.3,271.2 L152.6,267.1 L151.3,267.9 L146.7,263.6 L137.4,266.6 L136.8,264.4 L136.1,265.5 L131.6,262.2 L123.9,267.2 L120.2,267.9 L115.5,265.8 L114.2,267.4 L110.2,267.5 L105.5,263.7 L107.1,261.1 L105.6,256 L99.9,254.4 L100.1,250.4 L97.6,246.4 L93.7,245.6 L89.7,241.7 L86.3,241.4 L83.7,234 L96.3,230.8 L99.1,233.3 L103.1,233 L106.1,234.8 L109.1,233.4 L113.6,233.9 L117.2,236.2 L119.5,233.9 L122,235.1 L126.4,228.6 L131.1,227.9 L139.2,221.5 L141.9,221.8 L145.5,224.1 L147.7,229.7 L154,230.4 L154.9,232.3 L159.1,231.5 L157.5,233.5 L159.1,239.2 L157.9,240.7 L160.5,243.1 L161.2,240.8 L164.7,240.4 L164.2,242.9 L168.1,241.8 L169.2,244.7 L173.4,246.2Z"/>
+<path d="M37.5,75.6 L38.3,77.9 L40.4,78.3 L38.4,80.8 L41.6,81.6 L41.3,72.7 L38.2,70.4 L47.2,64.6 L51.3,72.1 L46.1,84.9 L47.9,91.3 L57.8,91.6 L69,79.4 L74.2,78.9 L76.1,76.8 L81.2,81.5 L82.5,85.1 L81,90.5 L82.7,91.7 L84.6,89.4 L84.9,98 L86.6,98.2 L92.4,92.8 L93.1,97.8 L84.2,104.9 L84.3,108.5 L80.7,112.2 L79.2,120.2 L71.5,122.2 L68.2,126.3 L66.2,122 L62.3,120.9 L62.6,124.8 L56.5,125.2 L53.4,122.5 L53.2,116.6 L50.5,113 L42.4,112.9 L37.7,101.6 L40.6,100.6 L40.5,98 L45.4,98.3 L46.1,94.8 L34.9,84.1 L37.9,79 L37.5,75.6Z"/>
+<path d="M127.7,98.1 L133.9,97.2 L141.7,98.8 L150.3,96.4 L157.2,99.3 L160.6,98.7 L173.2,113.9 L165.6,115.6 L160,111.3 L149.9,112.4 L141.3,111.2 L124.2,114.8 L120.7,110.8 L124.6,107.1 L127.7,98.1Z"/>
+<path d="M68.5,31.5 L74.5,25.5 L77.2,26.1 L78,33.8 L74.6,39.5 L68.6,35.3 L68.5,31.5Z"/>
+<path d="M88.3,151.9 L83.4,157.8 L82.2,157.4 L85,150 L86.4,150.1 L87.1,140.7 L89.6,137 L91.2,140.7 L89,144.3 L88.3,151.9Z"/>
+<path d="M62.7,42.6 L63.6,39.9 L60.5,41.9 L63.9,38.5 L63.7,34.1 L68.4,31 L68.6,35.3 L73.5,38.1 L74.2,41.8 L76.6,43.6 L75.3,45.8 L76.7,54.2 L81.5,57.9 L83.4,57.4 L88.4,61.3 L93.4,62.7 L95.5,73.2 L93.4,79.4 L94.2,87.2 L92.4,92.8 L86.6,98.2 L84.9,98 L84,95.1 L84.6,89.4 L82.3,91.7 L80.7,89.8 L82.5,85.1 L81.2,81.5 L76.1,76.8 L80.9,72.8 L81.4,65.6 L74.9,59.1 L74.9,54.4 L69.9,50.7 L66.4,50.7 L67.3,46.4 L64.6,45.8 L64.4,41.7 L62.7,42.6Z"/>
+<path d="M127.1,97.9 L124.6,107.1 L119.6,112.5 L120.9,114.7 L119,118.7 L122.8,121.8 L121.3,125 L119.5,124.1 L114.6,129.1 L111.6,127.9 L107,140.1 L99.3,135.5 L100.5,132.9 L97.3,125.8 L94.5,124 L91.1,127.4 L86.6,125.3 L85,119.3 L79.2,120.2 L81.8,111 L83.6,114.8 L86.3,115.2 L86.5,118.8 L88,117.9 L91.6,120.9 L97.4,121.2 L100.1,114.2 L102.2,116.1 L100.6,118.9 L101.8,120.5 L105.1,116.4 L108.8,117.2 L113.5,112 L112.8,105.9 L115.2,108.3 L117.1,107.3 L118,99.7 L120.2,100.3 L123.8,97.4 L127.1,97.9Z"/>
+<path d="M79.2,120.2 L77.7,128.9 L72.9,128.8 L67.9,131.7 L66.4,137.7 L59.7,133.3 L58.4,135.5 L57.1,134.6 L58.5,129.2 L61.6,128.6 L60.2,127 L57.8,127.4 L57.7,125.3 L62.6,124.8 L62.1,120.9 L66.2,122 L68.2,126.3 L71.5,122.2 L79.2,120.2Z"/>
+<path d="M70.3,178.6 L73.1,176.5 L72.2,174.2 L74.5,171.1 L78.3,171.9 L80.4,175 L79.3,181.1 L81.3,184.7 L80,187.2 L81.2,190.3 L96.9,194.7 L101.4,202.2 L106.6,207 L108.9,206.9 L112.2,202.4 L115,202.5 L119.3,205.2 L122.8,210.7 L126.7,212.1 L129.8,217.5 L139.2,221.5 L131.1,227.9 L124.7,229.8 L122,235.1 L119.5,233.9 L116.9,236.2 L113.6,233.9 L109.1,233.4 L106.1,234.8 L103.1,233 L99.1,233.3 L85.2,226.1 L80.5,225.7 L78.8,221.2 L73.8,219 L73.2,215.5 L69.8,215 L68.4,210.8 L58.3,208.1 L56.4,205.4 L49.9,202.6 L52.2,195.8 L55.5,195.8 L58,193.7 L69,178.4 L70.3,178.6Z"/>
+<path d="M121.3,109.8 L121.2,112.1 L124.7,114.9 L141.3,111.2 L150.9,112.4 L156.7,111.1 L160.8,111.6 L165.6,115.6 L161.3,122.5 L151.1,126.8 L141.1,137.4 L130.5,141.7 L126.8,144.9 L124.3,143.9 L114.1,146.7 L107.9,137.1 L111.6,127.9 L114.6,129.1 L119.5,124.1 L121.3,125 L122.8,121.8 L119,118.4 L121.3,109.8Z"/>
+<path d="M17.9,176.4 L23.6,177.3 L22.6,174.2 L25.7,172.8 L24.4,171.9 L26,170.2 L24.3,170.3 L28.9,164.6 L32.5,167.8 L35.2,166.6 L39.6,168.3 L41.2,166.7 L45.2,168 L47.3,164.3 L53.8,166.2 L54.7,171.6 L59.1,175.9 L58.9,179.4 L55.8,179.2 L51,181.7 L48.4,180.4 L47.7,185.6 L45.3,185.8 L44.4,188.7 L48.3,194.1 L52.6,195.6 L49.8,202.4 L53.8,205.5 L46,205.2 L45.8,200.5 L43.4,198.1 L38.8,200.3 L40,195.2 L38.6,193 L31.4,193.6 L33.6,188.7 L31.4,186.9 L31.6,184.9 L22.1,184.8 L20.1,178 L17.9,176.4Z"/>
+<path d="M22.7,176.1 L23.6,177.1 L21.4,175 L22.7,176.1Z"/>
+<path d="M21,175.5 L23.1,177.3 L21.3,177.3 L21,175.5Z"/>
+<path d="M110.6,36.6 L109.3,47.6 L101.2,60.1 L101.4,66.1 L99,69.3 L99.6,73.4 L100.9,74.4 L102.7,72.3 L101.7,77.9 L103.8,81.2 L100.4,85.9 L95.6,84.8 L97,81.5 L94.8,76.4 L95.4,71.9 L93.4,64.2 L94.7,61.2 L88.6,53.3 L95,51.5 L89.9,43.3 L90.2,41.2 L92.8,37.7 L98.8,35.1 L98.2,29.1 L104,29 L107.7,32.9 L106.6,37 L110.6,36.6Z"/>
+<path d="M28.8,70.5 L30.6,68 L37.5,75.6 L37.9,79 L34.9,84.1 L46.1,94.8 L45.4,98.3 L40.5,98 L40.6,100.6 L37.7,101.6 L41,107.4 L40.8,110.7 L43.1,113.2 L50.5,113 L53.2,116.6 L54.4,123.7 L51.9,127.8 L53.8,133.4 L45.4,145 L47.2,148.7 L41.8,152.1 L33.2,149 L30.3,145.8 L31.4,138.5 L32.6,139.4 L31,136.7 L30.4,126.8 L27.2,125 L32.8,120.9 L28.5,112.7 L31,106 L24.7,100.9 L25.3,97.9 L21.1,93.9 L24.1,88.6 L23.5,85.5 L26.8,88.7 L31.1,85.5 L31.8,82 L34.3,81.3 L28.8,70.5Z"/>
+<path d="M30.9,147.3 L32.3,147.4 L27.3,148.4 L29.5,145.9 L30.9,147.3Z"/>
+<path d="M82.2,157.4 L81,156.1 L81.7,147.7 L75.1,147 L79.5,120.6 L84.9,119.2 L86.7,125.4 L91.1,127.4 L94.7,124 L99.7,129.8 L99.7,136.1 L105.2,139.9 L108.1,138.8 L106.6,147.9 L99.6,146.7 L96.5,142.7 L94.5,144.5 L95.6,148.4 L88.3,151.9 L89,144.3 L91.2,140.7 L90.9,137.4 L89.6,137.1 L87.1,140.7 L86.4,150.1 L85,150 L82.2,157.4Z"/>
+<path d="M47.2,64.6 L50.4,62.3 L53.5,56.2 L56.2,54.3 L60.6,54.7 L69.3,61.5 L69.4,63.6 L66.7,65.1 L67.7,71.4 L69.8,73 L74.2,71.5 L76.7,75.7 L74.2,78.9 L69,79.4 L57.8,91.6 L47.9,91.3 L46.1,84.9 L51.3,72.1 L47.2,64.6Z"/>
+<path d="M215.7,202.8 L214.7,193.2 L210,185.8 L206.2,187 L200.2,192.6 L195.4,187.7 L193.9,191 L196,193 L171.2,192.1 L165.8,193.2 L160,190 L163.1,184.1 L162.3,183 L154.1,183.6 L146.6,177 L157.9,171.1 L157.4,168.5 L160.6,166.3 L161.5,160.6 L169.1,160.4 L169.9,157.7 L172.4,157.2 L175.9,156.9 L179.3,159.1 L189.1,155.7 L192.5,151.7 L195.6,153.4 L197.2,151.9 L201.1,153.4 L204,151.3 L205.5,156.3 L207.9,157.1 L211.4,162.4 L201.5,173.8 L205.6,173.4 L213.4,180.9 L212.9,183.2 L218.9,199.7 L219.1,201.9 L215.7,202.8Z"/>
+<path d="M107.6,207.3 L101.4,202.2 L97.1,195.4 L98.3,181 L106.5,181.5 L112.3,177.3 L115.5,177.9 L117.1,175.8 L122.5,175.4 L123.8,172.6 L133.8,173.3 L139.7,171.7 L149.8,173.9 L150.5,172.4 L152.3,172.8 L154,173.9 L146.6,177.2 L154.1,183.6 L162,182.8 L163,184 L159.3,187.4 L146.7,189.4 L140.3,193.8 L138,192.8 L135.1,201.2 L135.9,203.9 L135.1,203 L126.4,212 L122.8,210.7 L119.3,205.2 L114.4,202.3 L111.6,202.8 L107.6,207.3Z"/>
+<path d="M75,170.9 L72.2,174.2 L73.1,176.5 L69,178.4 L55.9,195.6 L49,194.5 L44.8,190.1 L45,186.2 L47.6,185.7 L48.8,183.1 L48.4,180.4 L51,181.7 L55.8,179.2 L58.9,179.4 L58.7,175 L54.6,171.3 L58.5,172 L64.3,163.8 L66.8,162.7 L72.5,162.2 L71.9,164.6 L74.8,164.8 L81,156.1 L82.2,157.9 L79.4,165.3 L75,170.9Z"/>
+<path d="M139.1,11 L127.2,14.6 L122.2,23.5 L118.1,24.1 L110.6,36.6 L106.6,37 L107.7,32.9 L104,29 L98.2,29.1 L98.9,21.3 L103.8,21 L113.7,13.6 L122.3,10.4 L124.5,6.5 L124,4.1 L127.6,3.8 L126.8,4.9 L128.2,5.4 L129.3,3.7 L127.7,3.3 L132.5,1.8 L133.7,0.7 L131.8,0.9 L132.5,0 L140.9,2.9 L143.1,7 L139.1,11Z"/>
+<path d="M75.9,24.7 L85.8,26.5 L82.3,26.7 L82.5,29 L80.4,28.7 L80.4,30.2 L82.1,30.5 L82,29.1 L83.9,30.8 L88.4,20.1 L98.9,21.3 L97.4,26.3 L98.8,35.1 L92.5,37.9 L89.9,42.8 L95,51.5 L88.6,53.3 L94.7,61.2 L93.4,64.2 L93.4,62.7 L88.4,61.3 L83.4,57.4 L81.5,57.9 L76.7,54.2 L75.3,45.8 L76.7,43.8 L74.1,41.3 L78.1,33.4 L78,27.8 L75.9,24.7Z"/>
+<path d="M75,170.9 L79.4,165.3 L82.2,157.4 L83.4,157.8 L87.1,151.9 L95.6,148.4 L94.5,144.5 L96.3,142.7 L99.6,146.7 L106.5,148 L108.1,138.8 L114,146.6 L124.3,143.9 L126.1,145.1 L143.9,135.5 L143.9,172.4 L133.8,173.3 L131.6,172.1 L127.4,173.6 L124.9,172.4 L122.5,175.4 L117.1,175.8 L115.5,177.9 L112.3,177.3 L106.5,181.5 L98.2,181.1 L96.9,194.7 L81.2,190.3 L80,187.2 L81.3,184.7 L79.3,181.1 L80.4,175 L78.3,171.9 L75,170.9Z"/>
+<path d="M7.7,201.3 L0.9,194.5 L4.1,191.2 L9,191.9 L9.5,189.5 L8.3,187.5 L7.3,188.3 L6.6,184.6 L13,176.3 L14.7,178.2 L14.8,176.1 L16.9,179.1 L17.5,176.3 L19.5,177.4 L22.1,184.8 L31.6,184.9 L31.4,186.9 L33.6,188.7 L31.4,193.6 L38.3,192.9 L40,195 L38.8,200.3 L35.6,202.6 L36.5,206 L32.9,211.4 L35.3,213.4 L35.7,216.9 L33.9,217.9 L29.6,216.6 L28.8,212.2 L25.6,211 L24.6,208.8 L17.9,207.7 L7.7,201.3Z"/>
+<path d="M16.9,176.7 L16.8,178.9 L15.4,175.7 L16.9,176.7Z"/>
+<path d="M108.9,56.9 L109.9,60.4 L112.8,60.2 L114.9,68.5 L120.1,74.1 L121,79 L118.2,81.3 L118.4,89.5 L123.3,91.3 L127.1,97.9 L123.8,97.4 L120.2,100.3 L117.2,100.2 L117,98.2 L111.2,97.1 L111.9,91.7 L109.2,87.1 L102.6,88.3 L97.6,84.8 L100.9,85.7 L103.9,80.9 L101.7,77.9 L102.7,72.3 L100.8,74.3 L99,69.6 L101.4,66.1 L101.2,60.1 L108.9,56.9Z"/>
+<path d="M52,216.7 L49.6,215.7 L47.7,216.7 L47.9,219.3 L45,220 L35.4,217.5 L35.2,213.2 L32.9,211.4 L36.7,205.5 L35.6,202.6 L43.7,198.2 L45.8,200.5 L46.3,205.5 L56.1,205.3 L58.3,208.1 L68.2,210.7 L69.8,215 L73.2,215.5 L73.8,219 L78.8,221.2 L79.2,224.9 L85.2,226.1 L93.5,231 L83.7,234 L76.9,229.5 L76.3,227 L74.3,227.7 L70.6,224.7 L68.1,225.8 L59,222.4 L52,216.7Z"/>
+<path d="M66.1,139.2 L60.4,149.6 L58.2,150.1 L57.7,141 L60.5,139.1 L66.1,139.2Z"/>
+<path d="M57.7,125.3 L57.8,127.4 L60.2,127 L61.6,128.6 L58.5,129.2 L57.1,134.6 L58.4,135.5 L59.7,133.3 L60.5,135 L64.3,135.5 L66.4,137.7 L65.2,139.7 L57.8,138.9 L53.8,133.4 L52.2,126.7 L54.4,123.7 L57.7,125.3Z"/>
+<path d="M97.8,85 L102.6,88.3 L109.2,87.1 L111.9,91.7 L111.2,97.1 L117,98.2 L118.4,103.2 L116,108.2 L112.8,105.9 L113.6,111.8 L108.8,117.2 L105.1,116.4 L101.6,120.5 L100.6,118.9 L102.2,116.1 L100.1,114.2 L97.6,121.1 L93.3,121.3 L88,117.9 L86.5,118.8 L86.3,115.2 L83.6,114.8 L81.8,111 L84.3,108.5 L84.2,104.9 L93.1,97.8 L92.2,93.6 L94.4,84.2 L93.4,79.4 L95,77.3 L97,81.5 L95.6,84.8 L97.8,85Z"/>
+<path d="M60.6,54.7 L62.8,51.1 L60.5,49.6 L62.7,42.6 L64.4,41.7 L64.6,45.8 L67.3,46.4 L66.4,50.7 L69.9,50.7 L74.9,54.4 L74.9,59.1 L81.4,65.6 L79.7,74.2 L76.6,75.2 L74.2,71.5 L69.8,73 L67.8,71.6 L66.7,65.1 L69.4,63.6 L69.3,61.5 L60.6,54.7Z"/>
+<path d="M81,156.1 L74.8,164.8 L71.9,164.6 L72.5,162.2 L66.8,162.7 L64.3,163.8 L58.5,172 L54.6,171.3 L53.2,168.1 L55.9,157.2 L65.6,140.6 L67.1,132.5 L72.9,128.8 L77.8,129.2 L75.1,147 L81.7,147.7 L81,156.1Z"/>
+<path d="M28.9,164.6 L30.4,163 L31.5,164.3 L31.4,160.2 L35.1,157.8 L33.6,156.7 L35,156.8 L36.7,153.6 L32,154.6 L33.8,150.8 L32.5,150.1 L30.7,153.3 L29.4,149.3 L32.6,147.7 L41.5,152.1 L44.9,151 L47.3,148.4 L45.4,145 L53.8,133.4 L56.6,138.2 L60.3,139.2 L57.7,141 L57.2,144.4 L59,145.7 L58.1,149.9 L59.8,151.3 L55.4,158.4 L53.8,166.2 L47.3,164.3 L45.2,168 L41.2,166.7 L39.6,168.3 L35.2,166.6 L32.5,167.8 L28.9,164.6Z"/>
+<path d="M165.8,193.2 L165.6,204.9 L174.8,204.8 L178.2,208.3 L178,212.6 L172.3,210.7 L162,213.3 L161.7,226.8 L169.8,233.3 L169.6,237.1 L173,242 L173.4,246.2 L169.2,244.7 L168.1,241.8 L164.2,242.9 L164.7,240.4 L161.2,240.8 L160.5,243.1 L157.9,240.7 L159.1,239.2 L157.5,233.5 L159.1,231.5 L154.9,232.3 L154,230.4 L147.7,229.7 L145.3,223.9 L129.8,217.5 L126.4,212 L135.1,203 L135.9,203.9 L135.1,201.2 L138,192.8 L140.3,193.8 L146.7,189.4 L151.2,189.7 L161.1,186.2 L160.1,190.3 L165.8,193.2Z"/>
+<path d="M208.7,112.6 L209.3,116.5 L205.6,120 L205.8,124.4 L201.7,128.7 L202.6,132.9 L201.1,142.5 L204,151 L202.5,152.9 L197.2,151.9 L195.8,153.5 L192.5,151.7 L189.1,155.7 L179.3,159.1 L175.9,156.9 L170.1,157.6 L169.1,160.4 L161.5,160.6 L160.6,166.3 L157.4,168.5 L158,170.7 L156.1,172.8 L154,173.9 L150.5,172.4 L149.8,173.9 L143.9,172.4 L143.9,135.5 L150.8,127.1 L160.8,122.9 L166.2,115.1 L175,113.3 L176.5,114.7 L179.8,112.2 L187.5,113.7 L198.5,112.3 L202,110.5 L208.7,112.6Z"/>
+</g>
+</svg>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="seccion__titulo">Los visores</h2>
+        <p class="seccion__nota">
+          Todos cargan las mismas capas, con la misma simbología y sin ninguna clave de API.
+        </p>
+
+        <div class="tarjetas">
+
+          <a class="tarjeta tarjeta--destacada" href="maplibre.html">
+            <span class="tarjeta__cinta">Terreno 3D</span>
+            <span class="tarjeta__lib">MapLibre GL JS 5.6</span>
+            <h3>Geovisor 3D de Colombia</h3>
+            <p>
+              Relieve real de la cordillera renderizado en la GPU, con sombreado, exageración vertical ajustable y
+              consulta de altura sobre el terreno. Es el visor más vistoso para una presentación comercial y el
+              que mejor muestra el territorio colombiano.
+            </p>
+            <div class="etiquetas">
+              <span class="etiqueta">Terreno 3D</span>
+              <span class="etiqueta">Teselas vectoriales</span>
+              <span class="etiqueta">Elevación m s. n. m.</span>
+              <span class="etiqueta">Vistas guiadas</span>
+              <span class="etiqueta">Licencia BSD</span>
+            </div>
+            <span class="tarjeta__cta">
+              Abrir visor
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+                stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </span>
+          </a>
+
+          <a class="tarjeta" href="arcgis.html">
+            <span class="tarjeta__lib">ArcGIS Maps SDK 4.31</span>
+            <h3>Visor sobre plataforma Esri</h3>
+            <p>
+              La opción natural cuando la entidad ya trabaja con ArcGIS Enterprise o Portal: mapas base de Esri,
+              GeoJSONLayer con renderizadores y etiquetado del propio SDK.
+            </p>
+            <div class="etiquetas">
+              <span class="etiqueta">Ecosistema Esri</span>
+              <span class="etiqueta">Satélite</span>
+              <span class="etiqueta">Etiquetado nativo</span>
+            </div>
+            <span class="tarjeta__cta">
+              Abrir visor
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+                stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </span>
+          </a>
+
+          <a class="tarjeta" href="leaflet.html">
+            <span class="tarjeta__lib">Leaflet 1.9.4</span>
+            <h3>Visor ligero</h3>
+            <p>
+              45 KB de librería. Cuando el requisito es que abra rápido en equipos modestos o en conexiones
+              lentas de territorio, Leaflet sigue siendo la respuesta correcta.
+            </p>
+            <div class="etiquetas">
+              <span class="etiqueta">Mínimo peso</span>
+              <span class="etiqueta">Compatibilidad amplia</span>
+              <span class="etiqueta">Sin WebGL</span>
+            </div>
+            <span class="tarjeta__cta">
+              Abrir visor
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+                stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </span>
+          </a>
+
+          <a class="tarjeta" href="openlayers.html">
+            <span class="tarjeta__lib">OpenLayers 10.3.1</span>
+            <h3>Visor con motor OGC</h3>
+            <p>
+              Reproyección entre sistemas de referencia, WMS, WMTS y control fino del dibujado. El camino cuando
+              hay que consumir servicios de IGAC, DANE o de una IDE institucional.
+            </p>
+            <div class="etiquetas">
+              <span class="etiqueta">WMS / WMTS</span>
+              <span class="etiqueta">Reproyección</span>
+              <span class="etiqueta">Declutter</span>
+            </div>
+            <span class="tarjeta__cta">
+              Abrir visor
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+                stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </span>
+          </a>
+
+        </div>
+      </section>
+
+      <section class="capacidades">
+        <div class="capacidad">
+          <span class="capacidad__icono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M13 2 3 14h9l-1 8 10-12h-9z" />
+            </svg>
+          </span>
+          <h4>Carga en segundos</h4>
+          <p>Capas simplificadas a 104 KB en total, precarga en paralelo y nada de servidores intermedios.</p>
+        </div>
+
+        <div class="capacidad">
+          <span class="capacidad__icono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <rect x="5" y="2" width="14" height="20" rx="2" />
+              <path d="M12 18h.01" />
+            </svg>
+          </span>
+          <h4>Responsivo de verdad</h4>
+          <p>En móvil el panel se vuelve hoja inferior y los controles crecen a 44 px de área táctil.</p>
+        </div>
+
+        <div class="capacidad">
+          <span class="capacidad__icono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </span>
+          <h4>Sin claves ni cuotas</h4>
+          <p>Datos de dominio público y teselas de acceso anónimo: la demo no caduca ni genera facturación.</p>
+        </div>
+
+        <div class="capacidad">
+          <span class="capacidad__icono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M3 3v18h18" />
+              <path d="m7 15 4-5 3 3 5-7" />
+            </svg>
+          </span>
+          <h4>Cartografía comparable</h4>
+          <p>La misma simbología proporcional en las cuatro, para evaluar cada librería en igualdad de condiciones.</p>
+        </div>
+      </section>
+
+      <section class="cierre">
+        <div class="cierre__texto">
+          <h2>¿Necesita un geovisor con sus propios datos?</h2>
+          <p>
+            Estos demos usan datos públicos. En proyecto trabajamos con catastro multipropósito, LADM_COL,
+            PostGIS y servicios OGC de su entidad, con el mismo nivel de acabado.
+          </p>
+        </div>
+        <a class="boton" href="https://spatialis.co/#contacto" target="_blank" rel="noopener">
+          Solicitar una demo guiada
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </a>
+      </section>
+
+    </main>
+
+    <footer class="pie">
+      <div class="pie__fila">
+        <span>© Spatialis S.A.S. · Bogotá, Colombia</span>
+        <a href="https://github.com/spatialis-co/geovisores" target="_blank" rel="noopener">Código en GitHub</a>
+        <a href="../aplicaciones/">Aplicaciones SIG</a>
+        <span class="pie__sep">Datos: Natural Earth · OpenStreetMap · Esri · AWS Terrain Tiles</span>
+      </div>
+    </footer>
+  </div>
 </body>
+
 </html>
