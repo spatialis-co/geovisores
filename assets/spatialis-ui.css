@@ -1,34 +1,54 @@
 /* ==========================================================================
    Spatialis · Sistema de interfaz para geovisores de demostracion
-   Los tokens replican app/globals.css del landing (spatialis.co) para que los
-   demos embebidos se lean como parte del mismo producto.
+
+   Tokens tomados del sistema oficial de spatialis.co (src/index.css), que
+   reparte el color 60-30-10:
+     60 % superficies neutras  · claro #FFFFFF/#F8FAFC · oscuro #060D17/#070D18/#0B1424
+     30 % azul corporativo     · #0068B5 · #0071C5 · #00C7FD
+     10 % acento esmeralda     · #047857 en claro · #34D399 en oscuro (WCAG AA)
+
+   El azul sostiene la cartografia y la estructura; la esmeralda queda
+   reservada a la accion principal y a los indicadores de estado, que es
+   justo el 10 % que define la marca.
    ========================================================================== */
 
 :root {
-  --sp-bg: #060b17;
-  --sp-surface: #0b1528;
-  --sp-elev: #111e38;
+  /* 60 % — superficies */
+  --sp-bg: #070d18;
+  --sp-surface: #0b1424;
+  --sp-elev: #0f1c30;
   --sp-border: #1e3a5f;
   --sp-border-soft: #16294a;
   --sp-text: #f8fafc;
   --sp-muted: #94a3b8;
   --sp-faint: #64748b;
-  --sp-cyan: #00c7fd;
-  --sp-blue: #0071c5;
+
+  /* 30 % — azul corporativo */
   --sp-cobalt: #0068b5;
-  --sp-ok: #34d399;
+  --sp-blue: #0071c5;
+  --sp-cyan: #00c7fd;
+
+  /* 10 % — acento esmeralda */
+  --sp-accent: #34d399;
+  --sp-accent-hover: #10b981;
+  --sp-accent-on: #020617;
+  --sp-accent-soft: rgba(52, 211, 153, .14);
+  --sp-accent-border: rgba(52, 211, 153, .35);
+  --sp-accent-glow: rgba(52, 211, 153, .30);
+
+  --sp-ok: var(--sp-accent);
   --sp-warn: #fbbf24;
 
   --sp-radius: 10px;
   --sp-radius-sm: 7px;
   --sp-shadow: 0 10px 30px -12px rgba(0, 0, 0, .8), 0 2px 6px -2px rgba(0, 0, 0, .6);
-  --sp-ring: 0 0 0 2px rgba(0, 199, 253, .55);
+  --sp-ring: 0 0 0 2px #0071c5;
   --sp-topbar-h: 56px;
   --sp-panel-w: 304px;
   --sp-ease: cubic-bezier(.16, 1, .3, 1);
 
-  --sp-font: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --sp-mono: "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  --sp-font: "Nunito", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --sp-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   color-scheme: dark;
 }
@@ -50,6 +70,21 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   overscroll-behavior: none;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -.015em;
+  text-wrap: balance;
+}
+
+p, li { text-wrap: pretty; }
+
+/* Cifras tabulares en todo lo que sea dato, como en spatialis.co */
+.sp-mono,
+.sp-attrs dd,
+.sp-coords {
+  font-family: var(--sp-mono);
+  font-feature-settings: "tnum" on, "zero" on;
 }
 
 /* ------------------------------------------------------------------ shell */
@@ -102,22 +137,23 @@ body {
   flex: none;
 }
 
+/* Isotipo oficial: pin topografico con la S. Se sirve como PNG recortado y
+   cuantizado (5 KB); en oscuro lleva el mismo resplandor cian del sitio. */
 .sp-brand__mark {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
-  background: var(--sp-blue);
-  display: grid;
-  place-items: center;
+  display: block;
+  object-fit: contain;
+  flex: none;
+  filter: drop-shadow(0 0 10px rgba(0, 199, 253, .40));
   transition: transform 200ms var(--sp-ease);
 }
 
-.sp-brand:hover .sp-brand__mark { transform: scale(1.06); }
-.sp-brand__mark svg { width: 17px; height: 17px; display: block; }
+.sp-brand:hover .sp-brand__mark { transform: scale(1.05); }
 
 .sp-brand__name {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 19px;
+  font-weight: 800;
   letter-spacing: -.02em;
   text-transform: lowercase;
 }
@@ -200,30 +236,41 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 30px;
-  padding: 0 12px;
-  border-radius: var(--sp-radius-sm);
-  background: var(--sp-blue);
-  color: #fff;
-  font-size: 12.5px;
-  font-weight: 600;
+  height: 32px;
+  padding: 0 15px;
+  border-radius: 999px;
+  background: var(--sp-accent);
+  color: var(--sp-accent-on);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
   text-decoration: none;
   white-space: nowrap;
-  transition: background 160ms var(--sp-ease);
+  box-shadow: 0 4px 14px -4px var(--sp-accent-glow);
+  transition: background 160ms var(--sp-ease), transform 160ms var(--sp-ease);
 }
 
-.sp-link:hover { background: #008be3; }
+.sp-link:hover { background: var(--sp-accent-hover); transform: translateY(-1px); }
 .sp-link:focus-visible { outline: none; box-shadow: var(--sp-ring); }
 
+/* Secundario: sin relleno, para no gastar el 10 % de acento en algo que no
+   es la accion principal. */
 .sp-link--ghost {
   background: transparent;
   border: 1px solid var(--sp-border);
   color: var(--sp-muted);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  box-shadow: none;
 }
 
 .sp-link--ghost:hover {
   background: var(--sp-elev);
   color: var(--sp-text);
+  transform: none;
 }
 
 /* ------------------------------------------------------------------ panel */
@@ -289,10 +336,11 @@ body {
 .sp-kpi__value {
   font-family: var(--sp-mono);
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.1;
   color: var(--sp-cyan);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" on, "zero" on;
 }
 
 .sp-kpi__label {
@@ -410,9 +458,10 @@ body {
 .sp-chip:focus-visible { outline: none; box-shadow: var(--sp-ring); }
 
 .sp-chip[aria-pressed="true"] {
-  background: rgba(0, 199, 253, .13);
-  border-color: var(--sp-cyan);
-  color: var(--sp-cyan);
+  background: var(--sp-blue);
+  border-color: var(--sp-blue);
+  color: #fff;
+  font-weight: 700;
 }
 
 /* deslizador (exageracion vertical) -------------------------------------- */
@@ -682,6 +731,20 @@ body {
 }
 
 .sp-loader__mark svg { width: 24px; height: 24px; }
+
+/* Isotipo oficial dentro del cargador */
+.sp-loader__marca {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 16px rgba(0, 199, 253, .45));
+  animation: sp-latido 1.9s var(--sp-ease) infinite;
+}
+
+@keyframes sp-latido {
+  0%, 100% { transform: scale(1); opacity: .92; }
+  50% { transform: scale(1.07); opacity: 1; }
+}
 
 .sp-loader__text {
   font-size: 13px;
