@@ -11,7 +11,7 @@ Portada con los cuatro accesos: <https://spatialis-co.github.io/geovisores/>
 | Librería | Versión | Qué demuestra | Demo | Archivo |
 |---|---|---|---|---|
 | MapLibre GL JS | 5.6 | **Terreno 3D** activo por defecto, relieve sombreado, exageración ajustable y consulta de altura | [Ver demo](https://spatialis-co.github.io/geovisores/maplibre.html) | `maplibre.html` |
-| ArcGIS Maps SDK for JavaScript | 4.31 | Integración con el ecosistema Esri: mapas base, `GeoJSONLayer`, renderizadores y etiquetado nativo | [Ver demo](https://spatialis-co.github.io/geovisores/arcgis.html) | `arcgis.html` |
+| ArcGIS Maps SDK for JavaScript | 5.2 | Integración con el ecosistema Esri: mapas base, `GeoJSONLayer`, renderizadores y etiquetado nativo | [Ver demo](https://spatialis-co.github.io/geovisores/arcgis.html) | `arcgis.html` |
 | Leaflet | 1.9.4 | Visor mínimo (45 KB) para equipos modestos y conexiones lentas | [Ver demo](https://spatialis-co.github.io/geovisores/leaflet.html) | `leaflet.html` |
 | OpenLayers | 10.3.1 | Motor OGC: reproyección, WMS/WMTS y *declutter* de etiquetas | [Ver demo](https://spatialis-co.github.io/geovisores/openlayers.html) | `openlayers.html` + `main.js` |
 

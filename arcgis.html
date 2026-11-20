@@ -22,12 +22,14 @@
     html,body{margin:0;height:100%;background:#060b17;color:#f8fafc}
   </style>
 
-  <link rel="stylesheet" href="https://js.arcgis.com/4.33/esri/themes/dark/main.css">
+  <!-- ArcGIS Maps SDK 5.2: módulo ES + web components. blocking="render" evita
+       el destello de los componentes antes de registrarse. -->
+  <script type="module" src="https://js.arcgis.com/5.2/" blocking="render"></script>
+  <link rel="stylesheet" href="https://js.arcgis.com/5.2/esri/themes/dark/main.css">
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="assets/spatialis-ui.css">
   <link rel="icon" href="assets/spatialis-favicon.png" type="image/png">
-  <script src="https://js.arcgis.com/4.33/"></script>
 </head>
 
 <body>
@@ -48,14 +50,21 @@
 
       <div class="sp-topbar__actions">
         <span class="sp-badge sp-badge--meta"><span class="sp-badge__dot"></span>Sin API key</span>
-        <span class="sp-badge sp-badge--lib">ArcGIS Maps SDK 4.33</span>
+        <span class="sp-badge sp-badge--lib">ArcGIS Maps SDK 5.2</span>
         <a class="sp-link sp-link--ghost" href="index.html">Otros visores</a>
         <a class="sp-link" href="https://spatialis.co/#contacto" target="_blank" rel="noopener">Solicitar demo</a>
       </div>
     </header>
 
     <div class="sp-stage">
-      <div id="map" role="application" aria-label="Mapa interactivo de Colombia"></div>
+      <!-- Componente web del SDK 5.x (sustituye al MapView programático).
+           Los controles de zoom y escala van como componentes en slots, que es
+           como 5.x reemplaza a view.ui.add(). -->
+      <arcgis-map id="map" role="application" aria-label="Mapa interactivo de Colombia"
+        basemap="dark-gray-vector" center="-73.6, 4.3" zoom="5">
+        <arcgis-zoom slot="top-right"></arcgis-zoom>
+        <arcgis-scale-bar slot="bottom-right" unit="metric"></arcgis-scale-bar>
+      </arcgis-map>
 
       <aside class="sp-panel" data-open="false" aria-label="Controles del geovisor">
         <span class="sp-panel__handle" aria-hidden="true"></span>
@@ -206,59 +215,65 @@
 
   <script src="assets/spatialis-ui.js" defer></script>
 
-  <script>
-    window.addEventListener("DOMContentLoaded", function () {
-      "use strict";
+  <script type="module">
+    "use strict";
 
-      var VISTAS = {
-        colombia: { center: [-73.6, 4.3], zoom: 5 },
-        bogota: { center: [-74.08, 4.65], zoom: 9 },
-        caribe: { center: [-74.6, 10.7], zoom: 7 },
-        eje: { center: [-75.6, 4.9], zoom: 8 },
+    var VISTAS = {
+      colombia: { center: [-73.6, 4.3], zoom: 5 },
+      bogota: { center: [-74.08, 4.65], zoom: 9 },
+      caribe: { center: [-74.6, 10.7], zoom: 7 },
+      eje: { center: [-75.6, 4.9], zoom: 8 },
+    };
+
+    /* Red de seguridad por si el SDK no llega a inicializar */
+    setTimeout(function () { if (window.SP) SP.listo(); }, 15000);
+
+    try {
+      /* En 5.x la API AMD require() desaparece: los módulos del core se piden
+         con $arcgis.import(), que expone el <script> del CDN. Los renderers,
+         etiquetas y popups se definen como objetos (autocast), igual que en 4.x. */
+      const [GeoJSONLayer] = await $arcgis.import(["@arcgis/core/layers/GeoJSONLayer.js"]);
+
+      /* Relleno translúcido + borde cian: el mismo tratamiento que en los
+         otros tres visores, para que la comparación sea justa. */
+      const rendererDeptos = {
+        type: "simple",
+        symbol: {
+          type: "simple-fill",
+          color: [0, 113, 197, 0.16],
+          outline: { color: SP.COLOR.limite, width: 1.2 },
+        },
       };
 
-      require([
-        "esri/Map",
-        "esri/views/MapView",
-        "esri/layers/GeoJSONLayer",
-        "esri/widgets/Zoom",
-        "esri/widgets/ScaleBar",
-      ], function (Map, MapView, GeoJSONLayer, Zoom, ScaleBar) {
+      /* Simbología proporcional con las mismas clases de SP.CLASES. */
+      const rendererCiudades = {
+        type: "simple",
+        symbol: {
+          type: "simple-marker",
+          style: "circle",
+          color: SP.COLOR.ciudad,
+          outline: { color: SP.COLOR.ciudadBorde, width: 1 },
+        },
+        visualVariables: [{
+          type: "size",
+          field: "poblacion",
+          stops: [
+            { value: 50000, size: SP.CLASES[3].radio * 2 },
+            { value: 100000, size: SP.CLASES[2].radio * 2 },
+            { value: 300000, size: SP.CLASES[1].radio * 2 },
+            { value: 1000000, size: SP.CLASES[0].radio * 2 },
+            { value: 8000000, size: (SP.CLASES[0].radio + 5) * 2 },
+          ],
+        }],
+      };
 
-        /* Relleno translúcido + borde cian: el mismo tratamiento que en los
-           otros tres visores, para que la comparación sea justa. */
-        var rendererDeptos = {
-          type: "simple",
-          symbol: {
-            type: "simple-fill",
-            color: [0, 113, 197, 0.16],
-            outline: { color: SP.COLOR.limite, width: 1.2 },
-          },
-        };
-
-        /* Simbología proporcional con las mismas clases de SP.CLASES. */
-        var rendererCiudades = {
-          type: "simple",
-          symbol: {
-            type: "simple-marker",
-            style: "circle",
-            color: SP.COLOR.ciudad,
-            outline: { color: SP.COLOR.ciudadBorde, width: 1 },
-          },
-          visualVariables: [{
-            type: "size",
-            field: "poblacion",
-            stops: [
-              { value: 50000, size: SP.CLASES[3].radio * 2 },
-              { value: 100000, size: SP.CLASES[2].radio * 2 },
-              { value: 300000, size: SP.CLASES[1].radio * 2 },
-              { value: 1000000, size: SP.CLASES[0].radio * 2 },
-              { value: 8000000, size: (SP.CLASES[0].radio + 5) * 2 },
-            ],
-          }],
-        };
-
-        var etiquetasDeptos = [{
+      const deptos = new GeoJSONLayer({
+        url: SP.DATA.departamentos,
+        title: "Departamentos",
+        /* 5.x solo carga los campos del renderer/etiquetas salvo que se pidan todos */
+        outFields: ["*"],
+        renderer: rendererDeptos,
+        labelingInfo: [{
           labelExpressionInfo: { expression: "Upper($feature.nombre)" },
           symbol: {
             type: "text",
@@ -269,21 +284,21 @@
           },
           labelPlacement: "always-horizontal",
           maxScale: 1500000,
-        }];
+        }],
+        labelsVisible: true,
+        popupEnabled: false,
+        copyright: "Natural Earth · Spatialis S.A.S.",
+      });
 
-        var deptos = new GeoJSONLayer({
-          url: SP.DATA.departamentos,
-          title: "Departamentos",
-          renderer: rendererDeptos,
-          labelingInfo: etiquetasDeptos,
-          labelsVisible: true,
-          popupEnabled: false,
-          copyright: "Natural Earth · Spatialis S.A.S.",
-        });
-
-        /* Solo se rotulan las ciudades grandes: por debajo de 150 000
-           habitantes el texto tapa el propio simbolo. */
-        var etiquetasCiudades = [{
+      const ciudades = new GeoJSONLayer({
+        url: SP.DATA.ciudades,
+        title: "Ciudades",
+        outFields: ["*"],
+        renderer: rendererCiudades,
+        /* Novedad 5.x — efecto de capa: un bloom suave hace que los círculos
+           de población emitan luz sobre el mapa oscuro, sin coste de datos. */
+        effect: "bloom(0.9, 0.5px, 0.12)",
+        labelingInfo: [{
           labelExpressionInfo: { expression: "$feature.nombre" },
           where: "poblacion >= 150000",
           symbol: {
@@ -295,129 +310,122 @@
             yoffset: -12,
           },
           labelPlacement: "above-center",
-        }];
-
-        var ciudades = new GeoJSONLayer({
-          url: SP.DATA.ciudades,
-          title: "Ciudades",
-          renderer: rendererCiudades,
-          labelingInfo: etiquetasCiudades,
-          labelsVisible: true,
-          popupEnabled: false,
-          copyright: "Natural Earth · Spatialis S.A.S.",
-        });
-
-        var mapa = new Map({ basemap: "dark-gray-vector", layers: [deptos, ciudades] });
-
-        var vista = new MapView({
-          container: "map",
-          map: mapa,
-          center: VISTAS.colombia.center,
-          zoom: VISTAS.colombia.zoom,
-          constraints: { minZoom: 3, rotationEnabled: false },
-          popupEnabled: false,
-          ui: { components: [] },
-        });
-
-        window.spView = vista;
-
-        vista.ui.add(new Zoom({ view: vista }), "top-right");
-        vista.ui.add(new ScaleBar({ view: vista, unit: "metric" }), "bottom-right");
-
-        /* ------------------------------------------------------ arranque */
-
-        vista.when(function () {
-          SP.listo();
-          return Promise.all([
-            deptos.queryFeatureCount().catch(function () { return 0; }),
-            ciudades.queryFeatures({ where: "1=1", outFields: ["poblacion"], returnGeometry: false })
-              .catch(function () { return { features: [] }; }),
-          ]);
-        }).then(function (res) {
-          SP.kpi("deptos", res[0] || "—");
-          var fs = res[1].features || [];
-          SP.kpi("ciudades", fs.length || "—");
-          var hab = fs.reduce(function (a, f) { return a + (f.attributes.poblacion || 0); }, 0);
-          SP.kpi("poblacion", hab ? (hab / 1e6).toFixed(1).replace(".", ",") + " M" : "—");
-        }).catch(function (e) {
-          SP.listo();
-          SP.aviso("No se pudieron cargar las capas de Colombia: " + (e && e.message ? e.message : e));
-        });
-
-        /* --------------------------------------------------- interacción */
-
-        vista.on("pointer-move", function (ev) {
-          var p = vista.toMap({ x: ev.x, y: ev.y });
-          if (p) SP.coordenadas(p.longitude, p.latitude);
-        });
-
-        vista.on("click", function (ev) {
-          vista.hitTest(ev, { include: [ciudades, deptos] }).then(function (r) {
-            var res = (r.results || []).filter(function (x) { return x.graphic && x.graphic.attributes; });
-            if (!res.length) { SP.ficha.cerrar(); return; }
-
-            /* hitTest devuelve primero lo que está encima: la ciudad gana */
-            var g = res[0].graphic;
-            var a = g.attributes;
-
-            if (a.poblacion !== undefined && a.poblacion !== null) {
-              SP.ficha.mostrar(a.nombre, a.capital === 1 ? "Capital · " + a.rango : a.rango, [
-                ["Departamento", a.departamento || "—"],
-                ["Población", SP.entero(a.poblacion)],
-                ["Longitud", ev.mapPoint.longitude.toFixed(4) + "°"],
-                ["Latitud", ev.mapPoint.latitude.toFixed(4) + "°"],
-              ]);
-            } else {
-              SP.ficha.mostrar(a.nombre, a.tipo || "Departamento", [
-                ["Código ISO", a.iso || "—"],
-                ["Longitud", ev.mapPoint.longitude.toFixed(4) + "°"],
-                ["Latitud", ev.mapPoint.latitude.toFixed(4) + "°"],
-              ]);
-            }
-          });
-        });
-
-        /* ----------------------------------------------------- controles */
-
-        document.getElementById("cap-deptos").addEventListener("change", function () {
-          deptos.visible = this.checked;
-        });
-
-        document.getElementById("cap-etiquetas").addEventListener("change", function () {
-          deptos.labelsVisible = this.checked;
-        });
-
-        document.getElementById("cap-ciudades").addEventListener("change", function () {
-          ciudades.visible = this.checked;
-        });
-
-        document.querySelectorAll("[data-vista]").forEach(function (btn) {
-          btn.addEventListener("click", function () {
-            var v = VISTAS[btn.dataset.vista];
-            if (!v) return;
-            document.querySelectorAll("[data-vista]").forEach(function (b) {
-              b.setAttribute("aria-pressed", String(b === btn));
-            });
-            vista.goTo({ center: v.center, zoom: v.zoom }, { duration: 1400, easing: "out-expo" });
-            SP.ficha.cerrar();
-          });
-        });
-
-        document.querySelectorAll("[data-base]").forEach(function (btn) {
-          btn.addEventListener("click", function () {
-            document.querySelectorAll("[data-base]").forEach(function (b) {
-              b.setAttribute("aria-pressed", String(b === btn));
-            });
-            mapa.basemap = btn.dataset.base;
-          });
-        });
-      }, function (err) {
-        SP.listo();
-        SP.aviso("No se pudo cargar el SDK de ArcGIS: " + (err && err.message ? err.message : err));
+        }],
+        labelsVisible: true,
+        popupEnabled: false,
+        copyright: "Natural Earth · Spatialis S.A.S.",
       });
 
-      setTimeout(SP.listo, 15000);
-    });
+      /* El componente <arcgis-map> crea el Map y la MapView a partir de sus
+         atributos. Esperamos a que esté definido y listo antes de tocar su
+         .map / .view, y entonces añadimos nuestras capas. */
+      const mapaEl = document.querySelector("#map");
+      await customElements.whenDefined("arcgis-map");
+      await mapaEl.viewOnReady();
+
+      const vista = mapaEl.view;
+      vista.constraints = { minZoom: 3, rotationEnabled: false };
+      mapaEl.map.addMany([deptos, ciudades]);
+      window.spView = vista;
+      SP.listo();
+
+      /* KPIs del panel */
+      try {
+        const n = await deptos.queryFeatureCount();
+        SP.kpi("deptos", n || "—");
+        const fs = await ciudades.queryFeatures({ where: "1=1", outFields: ["poblacion"], returnGeometry: false });
+        const feats = fs.features || [];
+        SP.kpi("ciudades", feats.length || "—");
+        const hab = feats.reduce(function (a, f) { return a + (f.attributes.poblacion || 0); }, 0);
+        SP.kpi("poblacion", hab ? (hab / 1e6).toFixed(1).replace(".", ",") + " M" : "—");
+      } catch (e) { /* los KPIs son accesorios */ }
+
+      /* --------------- interacción + resaltado al pasar el cursor ---------
+         Novedad 5.x que aprovechamos: layerView.highlight() marca el
+         departamento bajo el cursor con un halo, sin repintar la capa. */
+      const lvDeptos = await vista.whenLayerView(deptos);
+      try {
+        vista.highlights = [{ name: "default", color: SP.COLOR.cian || "#00c7fd", haloOpacity: 0.9, fillOpacity: 0.12 }];
+      } catch (e) { /* si la API de highlights difiere, se ignora */ }
+      let resaltado = null;
+
+      vista.on("pointer-move", function (ev) {
+        const p = vista.toMap({ x: ev.x, y: ev.y });
+        if (p) SP.coordenadas(p.longitude, p.latitude);
+
+        vista.hitTest(ev, { include: [deptos] }).then(function (r) {
+          const g = (r.results || []).find(function (x) { return x.graphic; });
+          const id = g && g.graphic ? g.graphic.getObjectId && g.graphic.getObjectId() : null;
+          if (resaltado && (!g || id !== resaltado.id)) { resaltado.handle.remove(); resaltado = null; }
+          if (g && (!resaltado || id !== resaltado.id)) {
+            resaltado = { id: id, handle: lvDeptos.highlight(g.graphic) };
+          }
+          vista.container.style.cursor = g ? "pointer" : "";
+        }).catch(function () { });
+      });
+
+      vista.on("click", function (ev) {
+        vista.hitTest(ev, { include: [ciudades, deptos] }).then(function (r) {
+          const res = (r.results || []).filter(function (x) { return x.graphic && x.graphic.attributes; });
+          if (!res.length) { SP.ficha.cerrar(); return; }
+          const a = res[0].graphic.attributes;
+          if (a.poblacion !== undefined && a.poblacion !== null) {
+            SP.ficha.mostrar(a.nombre, a.capital === 1 ? "Capital · " + a.rango : a.rango, [
+              ["Departamento", a.departamento || "—"],
+              ["Población", SP.entero(a.poblacion)],
+              ["Longitud", ev.mapPoint.longitude.toFixed(4) + "°"],
+              ["Latitud", ev.mapPoint.latitude.toFixed(4) + "°"],
+            ]);
+          } else {
+            SP.ficha.mostrar(a.nombre, a.tipo || "Departamento", [
+              ["Código ISO", a.iso || "—"],
+              ["Longitud", ev.mapPoint.longitude.toFixed(4) + "°"],
+              ["Latitud", ev.mapPoint.latitude.toFixed(4) + "°"],
+            ]);
+          }
+        });
+      });
+
+      /* ----------------------------------------------------- controles */
+
+      document.getElementById("cap-deptos").addEventListener("change", function () {
+        deptos.visible = this.checked;
+      });
+      document.getElementById("cap-etiquetas").addEventListener("change", function () {
+        deptos.labelsVisible = this.checked;
+      });
+      document.getElementById("cap-ciudades").addEventListener("change", function () {
+        ciudades.visible = this.checked;
+      });
+
+      document.querySelectorAll("[data-vista]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          const v = VISTAS[btn.dataset.vista];
+          if (!v) return;
+          document.querySelectorAll("[data-vista]").forEach(function (b) {
+            b.setAttribute("aria-pressed", String(b === btn));
+          });
+          vista.goTo({ center: v.center, zoom: v.zoom }, { duration: 1400, easing: "out-expo" });
+          SP.ficha.cerrar();
+        });
+      });
+
+      document.querySelectorAll("[data-base]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          document.querySelectorAll("[data-base]").forEach(function (b) {
+            b.setAttribute("aria-pressed", String(b === btn));
+          });
+          mapaEl.basemap = btn.dataset.base;
+        });
+      });
+
+    } catch (err) {
+      if (window.SP) {
+        SP.listo();
+        SP.aviso("No se pudo cargar el SDK de ArcGIS: " + (err && err.message ? err.message : err));
+      }
+      console.error(err);
+    }
   </script>
 </body>
 
