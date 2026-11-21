@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" crossorigin>
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
-  <link rel="stylesheet" href="assets/spatialis-ui.css">
+  <link rel="stylesheet" href="assets/spatialis-ui.css?v=1">
   <link rel="icon" href="assets/spatialis-favicon.png" type="image/png">
 </head>
 
@@ -378,10 +378,12 @@
             type: "hillshade",
             source: "dem-relieve",
             paint: {
-              "hillshade-exaggeration": 0.42,
-              "hillshade-shadow-color": "#04070f",
-              "hillshade-highlight-color": "#9fd8f0",
-              "hillshade-accent-color": "#0b3b57",
+              /* Relieve en gris neutro: el azulado anterior no se veía natural
+                 sobre el mapa base de calles. */
+              "hillshade-exaggeration": 0.38,
+              "hillshade-shadow-color": "#5b5b5b",
+              "hillshade-highlight-color": "#f4f4f4",
+              "hillshade-accent-color": "#8a8a8a",
             },
             layout: { visibility: estado.relieve ? "visible" : "none" },
           }, primeraEtiqueta());
