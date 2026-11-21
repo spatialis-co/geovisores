@@ -132,10 +132,10 @@
               </label>
               <label class="sp-row">
                 <input type="checkbox" id="cap-deptos" checked>
-                <span class="sp-swatch" style="background:rgba(0,113,197,.35);border-color:#00c7fd"></span>
+                <span class="sp-swatch" style="background:transparent;border-color:#00c7fd"></span>
                 <span class="sp-row__text">
                   <span class="sp-row__name">Departamentos</span>
-                  <span class="sp-row__meta">33 entidades · límites y relleno</span>
+                  <span class="sp-row__meta">33 entidades · solo contorno</span>
                 </span>
                 <span class="sp-switch" aria-hidden="true"></span>
               </label>
@@ -168,7 +168,8 @@
                 <output class="sp-range__out" for="exageracion">1.5×</output>
               </div>
               <div class="sp-chips" data-bases style="margin-top:11px">
-                <button class="sp-chip" type="button" data-base="dark" aria-pressed="true">Oscuro</button>
+                <button class="sp-chip" type="button" data-base="satelital" aria-pressed="true">Satelital</button>
+                <button class="sp-chip" type="button" data-base="dark">Oscuro</button>
                 <button class="sp-chip" type="button" data-base="positron">Claro</button>
                 <button class="sp-chip" type="button" data-base="liberty">Calles</button>
               </div>
@@ -191,8 +192,9 @@
                 Límites y ciudades derivados de <a href="https://www.naturalearthdata.com" target="_blank"
                   rel="noopener">Natural Earth</a> (dominio público). Elevación: <a
                   href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles</a>.
-                Mapa base: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> ·
-                OpenStreetMap.
+                Mapa base satelital: <a href="https://www.esri.com" target="_blank" rel="noopener">Esri World
+                  Imagery</a>. Bases vectoriales: <a href="https://openfreemap.org" target="_blank"
+                  rel="noopener">OpenFreeMap</a> · OpenStreetMap.
               </p>
             </div>
           </details>
@@ -236,7 +238,7 @@
         <span>Elev. <strong data-elev style="color:var(--sp-muted);font-family:var(--sp-mono)">—</strong></span>
         <span class="sp-statusbar__spacer"></span>
         <span class="sp-attribution">
-          © OpenStreetMap · Natural Earth · <a href="https://spatialis.com.co" target="_blank"
+          Esri · © OpenStreetMap · Natural Earth · <a href="https://spatialis.com.co" target="_blank"
             rel="noopener">spatialis.com.co</a>
         </span>
       </div>
@@ -259,7 +261,29 @@
     window.addEventListener("DOMContentLoaded", function () {
       "use strict";
 
+      /* Mapa base satelital propio (Esri World Imagery, sin clave) servido como
+         estilo raster. Declara glyphs de OpenFreeMap para que las etiquetas de
+         departamentos y ciudades conserven tipografía sobre este estilo. */
+      var ESTILO_SATELITAL = {
+        version: 8,
+        glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+        sources: {
+          satelital: {
+            type: "raster",
+            tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+            tileSize: 256,
+            maxzoom: 19,
+            attribution: "Esri · Maxar · Earthstar Geographics",
+          },
+        },
+        layers: [
+          { id: "fondo", type: "background", paint: { "background-color": "#0a1016" } },
+          { id: "satelital", type: "raster", source: "satelital" },
+        ],
+      };
+
       var ESTILOS = {
+        satelital: ESTILO_SATELITAL,
         dark: "https://tiles.openfreemap.org/styles/dark",
         positron: "https://tiles.openfreemap.org/styles/positron",
         liberty: "https://tiles.openfreemap.org/styles/liberty",
@@ -289,7 +313,7 @@
       };
 
       var estado = {
-        base: "dark",
+        base: "satelital",
         terreno: true,
         relieve: true,
         deptos: true,
@@ -304,7 +328,7 @@
 
       var map = new maplibregl.Map({
         container: "map",
-        style: ESTILOS.dark,
+        style: ESTILOS.satelital,
         center: VISTAS.bogota.center,
         zoom: 6.6,
         pitch: 58,
@@ -432,16 +456,11 @@
             source: "deptos",
             layout: { visibility: vd },
             paint: {
-              "fill-color": [
-                "case",
-                ["boolean", ["feature-state", "hover"], false], "#2b8fd6",
-                SP.COLOR.relleno
-              ],
-              "fill-opacity": [
-                "case",
-                ["boolean", ["feature-state", "hover"], false], 0.42,
-                0.14
-              ],
+              /* Relleno invisible: los departamentos se ven solo por su
+                 contorno. La capa se conserva (opacidad 0) para seguir captando
+                 el hover y el clic sobre toda la superficie del polígono. */
+              "fill-color": SP.COLOR.relleno,
+              "fill-opacity": 0,
             },
           }, antes);
         }
@@ -453,9 +472,16 @@
             source: "deptos",
             layout: { visibility: vd, "line-join": "round" },
             paint: {
-              "line-color": SP.COLOR.limite,
-              "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.7, 8, 1.6, 12, 2.6],
-              "line-opacity": 0.85,
+              /* El realce de selección vive en el contorno (no hay relleno):
+                 al pasar el cursor, la línea se aclara y engrosa. */
+              "line-color": ["case",
+                ["boolean", ["feature-state", "hover"], false], "#8fe9ff",
+                SP.COLOR.limite],
+              "line-width": ["*",
+                ["case", ["boolean", ["feature-state", "hover"], false], 2, 1],
+                ["interpolate", ["linear"], ["zoom"], 4, 0.8, 8, 1.7, 12, 2.6]],
+              "line-opacity": ["case",
+                ["boolean", ["feature-state", "hover"], false], 1, 0.85],
             },
           }, antes);
         }
