@@ -9,6 +9,9 @@
     content="Geovisor web de Colombia con el ArcGIS Maps SDK for JavaScript: 33 departamentos, 72 ciudades con simbología proporcional y mapas base de Esri. Demo de Spatialis S.A.S.">
   <meta name="color-scheme" content="dark">
 
+  <!-- Puente de tema (anti-FOUC + sincronización con la web padre), síncrono -->
+  <script src="assets/spatialis-theme-bridge.js"></script>
+
   <link rel="preconnect" href="https://js.arcgis.com" crossorigin>
   <link rel="preconnect" href="https://cdn.arcgis.com" crossorigin>
   <link rel="preconnect" href="https://services.arcgisonline.com" crossorigin>
@@ -133,6 +136,7 @@
             <div class="sp-fold__body">
               <div class="sp-chips" data-bases>
                 <button class="sp-chip" type="button" data-base="dark-gray-vector" aria-pressed="true">Oscuro</button>
+                <button class="sp-chip" type="button" data-base="light-gray-vector">Claro</button>
                 <button class="sp-chip" type="button" data-base="topo-vector">Topográfico</button>
                 <button class="sp-chip" type="button" data-base="satellite">Satélite</button>
               </div>
@@ -408,13 +412,30 @@
         });
       });
 
-      document.querySelectorAll("[data-base]").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          document.querySelectorAll("[data-base]").forEach(function (b) {
-            b.setAttribute("aria-pressed", String(b === btn));
-          });
-          mapaEl.basemap = btn.dataset.base;
+      var baseClave = "dark-gray-vector";
+      function seleccionarBase(clave) {
+        baseClave = clave;
+        document.querySelectorAll("[data-base]").forEach(function (b) {
+          b.setAttribute("aria-pressed", String(b.dataset.base === clave));
         });
+        mapaEl.basemap = clave;
+      }
+
+      document.querySelectorAll("[data-base]").forEach(function (btn) {
+        btn.addEventListener("click", function () { seleccionarBase(btn.dataset.base); });
+      });
+
+      /* base inicial según el tema (Claro usa el lienzo gris claro de Esri) */
+      if (window.SpatialisTheme && SpatialisTheme.get() === "light") {
+        seleccionarBase("light-gray-vector");
+      }
+
+      /* La base sigue el tema solo si está en una base temática (Claro/Oscuro);
+         Topográfico y Satélite son elección del usuario y se respetan. */
+      window.addEventListener("spatialis:theme-change", function (e) {
+        if (baseClave === "dark-gray-vector" || baseClave === "light-gray-vector") {
+          seleccionarBase(e.detail.theme === "light" ? "light-gray-vector" : "dark-gray-vector");
+        }
       });
 
     } catch (err) {

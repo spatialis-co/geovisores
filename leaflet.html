@@ -9,6 +9,9 @@
     content="Geovisor web ligero de Colombia con Leaflet: 33 departamentos, 72 ciudades con simbología proporcional y teselas sin API key. Demo de Spatialis S.A.S.">
   <meta name="color-scheme" content="dark">
 
+  <!-- Puente de tema (anti-FOUC + sincronización con la web padre), síncrono -->
+  <script src="assets/spatialis-theme-bridge.js"></script>
+
   <link rel="preconnect" href="https://unpkg.com" crossorigin>
   <link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -152,6 +155,7 @@
             <div class="sp-fold__body">
               <div class="sp-chips" data-bases>
                 <button class="sp-chip" type="button" data-base="oscuro" aria-pressed="true">Oscuro</button>
+                <button class="sp-chip" type="button" data-base="claro">Claro</button>
                 <button class="sp-chip" type="button" data-base="satelite">Satélite</button>
                 <button class="sp-chip" type="button" data-base="calles">Calles</button>
               </div>
@@ -256,6 +260,11 @@
           opciones: { maxZoom: 16 },
           referencia: ESRI + "Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
         },
+        claro: {
+          url: ESRI + "Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+          opciones: { maxZoom: 16 },
+          referencia: ESRI + "Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
+        },
         satelite: {
           url: ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}",
           opciones: { maxZoom: 19 },
@@ -294,11 +303,12 @@
       L.control.zoom({ position: "topright" }).addTo(map);
       L.control.scale({ position: "bottomright", imperial: false, maxWidth: 110 }).addTo(map);
 
-      var baseActual = null;
+      var baseActual = null, baseClave = null;
 
       function ponerBase(clave) {
         var b = BASES[clave];
         if (!b) return;
+        baseClave = clave;
         if (baseActual) baseActual.forEach(function (c) { map.removeLayer(c); });
         baseActual = [L.tileLayer(b.url, b.opciones).addTo(map)];
         if (b.referencia) {
@@ -307,7 +317,10 @@
         baseActual.forEach(function (c) { c.bringToBack(); });
       }
 
-      ponerBase("oscuro");
+      ponerBase((window.SpatialisTheme && SpatialisTheme.get() === "light") ? "claro" : "oscuro");
+      document.querySelectorAll("[data-base]").forEach(function (x) {
+        x.setAttribute("aria-pressed", String(x.dataset.base === baseClave));
+      });
 
       /* ------------------------------------------------------------ capas */
 
@@ -490,14 +503,25 @@
         });
       });
 
-      document.querySelectorAll("[data-base]").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          if (!BASES[btn.dataset.base]) return;
-          document.querySelectorAll("[data-base]").forEach(function (x) {
-            x.setAttribute("aria-pressed", String(x === btn));
-          });
-          ponerBase(btn.dataset.base);
+      function seleccionarBase(clave) {
+        if (!BASES[clave]) return;
+        document.querySelectorAll("[data-base]").forEach(function (x) {
+          x.setAttribute("aria-pressed", String(x.dataset.base === clave));
         });
+        ponerBase(clave);
+      }
+
+      document.querySelectorAll("[data-base]").forEach(function (btn) {
+        btn.addEventListener("click", function () { seleccionarBase(btn.dataset.base); });
+      });
+
+      /* La base sigue el tema del sitio solo si está en una base temática
+         (Claro/Oscuro); Satélite y Calles son elección del usuario y se
+         respetan, cambiando entonces únicamente la interfaz. */
+      window.addEventListener("spatialis:theme-change", function (e) {
+        if (baseClave === "oscuro" || baseClave === "claro") {
+          seleccionarBase(e.detail.theme === "light" ? "claro" : "oscuro");
+        }
       });
 
       setTimeout(SP.listo, 12000);

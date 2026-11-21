@@ -8,6 +8,11 @@
   <meta name="description"
     content="Geovisor web con terreno 3D sobre Colombia: relieve sombreado, 33 departamentos y 72 ciudades con simbología proporcional. Demo de Spatialis S.A.S. construida con MapLibre GL JS.">
   <meta name="color-scheme" content="dark">
+
+  <!-- Puente de tema: resuelve y aplica el tema a <html> antes de pintar
+       (anti-FOUC) y sincroniza en vivo con la web padre. Debe ir síncrono. -->
+  <script src="assets/spatialis-theme-bridge.js"></script>
+
   <meta property="og:title" content="Geovisor 3D de Colombia · MapLibre GL JS">
   <meta property="og:description"
     content="Terreno 3D, relieve sombreado y cartografía de Colombia en el navegador, sin plugins y sin licencias de datos.">
@@ -756,17 +761,27 @@
           });
         });
 
-        document.querySelectorAll("[data-base]").forEach(function (btn) {
-          btn.addEventListener("click", function () {
-            if (estado.base === btn.dataset.base) return;
-            estado.base = btn.dataset.base;
-            document.querySelectorAll("[data-base]").forEach(function (b) {
-              b.setAttribute("aria-pressed", String(b === btn));
-            });
-            /* diff:false fuerza un estilo limpio; las capas se vuelven a
-               montar en el evento style.load de abajo. */
-            map.setStyle(ESTILOS[estado.base], { diff: false });
+        function cambiarBase(nombre) {
+          if (!ESTILOS[nombre] || estado.base === nombre) return;
+          estado.base = nombre;
+          document.querySelectorAll("[data-base]").forEach(function (b) {
+            b.setAttribute("aria-pressed", String(b.dataset.base === nombre));
           });
+          /* diff:false fuerza un estilo limpio; las capas se remontan en style.load */
+          map.setStyle(ESTILOS[estado.base], { diff: false });
+        }
+
+        document.querySelectorAll("[data-base]").forEach(function (btn) {
+          btn.addEventListener("click", function () { cambiarBase(btn.dataset.base); });
+        });
+
+        /* La base sigue el tema del sitio solo si está en una base temática
+           (Claro/Oscuro); Satelital y Calles son elección del usuario y se
+           respetan, adaptando entonces únicamente la interfaz. */
+        window.addEventListener("spatialis:theme-change", function (e) {
+          if (estado.base === "positron" || estado.base === "dark") {
+            cambiarBase(e.detail.theme === "light" ? "positron" : "dark");
+          }
         });
       }
 

@@ -23,6 +23,10 @@ window.addEventListener("DOMContentLoaded", function () {
       ESRI + "Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
       ESRI + "Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
     ],
+    claro: [
+      ESRI + "Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+      ESRI + "Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
+    ],
     satelite: [
       ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}",
       ESRI + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
@@ -140,7 +144,8 @@ window.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  var basesActuales = capaBase(BASES.oscuro);
+  var baseClave = (window.SpatialisTheme && SpatialisTheme.get() === "light") ? "claro" : "oscuro";
+  var basesActuales = capaBase(BASES[baseClave]);
 
   var mapa = new ol.Map({
     target: "map",
@@ -294,17 +299,32 @@ window.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  document.querySelectorAll("[data-base]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      var urls = BASES[btn.dataset.base];
-      if (!urls) return;
-      document.querySelectorAll("[data-base]").forEach(function (b) {
-        b.setAttribute("aria-pressed", String(b === btn));
-      });
-      basesActuales.forEach(function (c) { mapa.removeLayer(c); });
-      basesActuales = capaBase(urls);
-      basesActuales.forEach(function (c) { mapa.addLayer(c); });
+  function seleccionarBase(clave) {
+    if (!BASES[clave]) return;
+    baseClave = clave;
+    document.querySelectorAll("[data-base]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.base === clave));
     });
+    basesActuales.forEach(function (c) { mapa.removeLayer(c); });
+    basesActuales = capaBase(BASES[clave]);
+    basesActuales.forEach(function (c) { mapa.addLayer(c); });
+  }
+
+  /* chip activo según la base inicial (que sigue el tema) */
+  document.querySelectorAll("[data-base]").forEach(function (b) {
+    b.setAttribute("aria-pressed", String(b.dataset.base === baseClave));
+  });
+
+  document.querySelectorAll("[data-base]").forEach(function (btn) {
+    btn.addEventListener("click", function () { seleccionarBase(btn.dataset.base); });
+  });
+
+  /* La base sigue el tema solo si está en una base temática (Claro/Oscuro);
+     Satélite y Calles son elección del usuario y se respetan. */
+  window.addEventListener("spatialis:theme-change", function (e) {
+    if (baseClave === "oscuro" || baseClave === "claro") {
+      seleccionarBase(e.detail.theme === "light" ? "claro" : "oscuro");
+    }
   });
 
   setTimeout(SP.listo, 12000);

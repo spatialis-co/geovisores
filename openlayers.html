@@ -9,6 +9,9 @@
     content="Geovisor web de Colombia con OpenLayers: 33 departamentos, 72 ciudades con simbología proporcional, reproyección y teselas sin API key. Demo de Spatialis S.A.S.">
   <meta name="color-scheme" content="dark">
 
+  <!-- Puente de tema (anti-FOUC + sincronización con la web padre), síncrono -->
+  <script src="assets/spatialis-theme-bridge.js"></script>
+
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="preconnect" href="https://services.arcgisonline.com" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -122,6 +125,7 @@
             <div class="sp-fold__body">
               <div class="sp-chips" data-bases>
                 <button class="sp-chip" type="button" data-base="oscuro" aria-pressed="true">Oscuro</button>
+                <button class="sp-chip" type="button" data-base="claro">Claro</button>
                 <button class="sp-chip" type="button" data-base="satelite">Satélite</button>
                 <button class="sp-chip" type="button" data-base="calles">Calles</button>
               </div>
