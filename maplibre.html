@@ -42,7 +42,7 @@
   <div class="sp-app">
 
     <header class="sp-topbar">
-      <a class="sp-brand" href="index.html" title="Volver a los geovisores de Spatialis">
+      <a class="sp-brand" href="https://spatialis.com.co" title="Ir a spatialis.com.co">
         <img class="sp-brand__mark" src="assets/spatialis-isotipo.png" alt="" width="30" height="30">
         <span class="sp-brand__name">spatialis</span>
       </a>
@@ -55,9 +55,7 @@
       </div>
 
       <div class="sp-topbar__actions">
-        <span class="sp-badge sp-badge--meta"><span class="sp-badge__dot"></span>Sin API key</span>
         <span class="sp-badge sp-badge--lib">MapLibre GL JS 5.6</span>
-        <a class="sp-link sp-link--ghost" href="index.html">Otros visores</a>
         <a class="sp-link" href="https://spatialis.com.co/#contacto" target="_blank" rel="noopener">Solicitar demo</a>
       </div>
     </header>
@@ -168,10 +166,10 @@
                 <output class="sp-range__out" for="exageracion">1.5×</output>
               </div>
               <div class="sp-chips" data-bases style="margin-top:11px">
-                <button class="sp-chip" type="button" data-base="satelital" aria-pressed="true">Satelital</button>
+                <button class="sp-chip" type="button" data-base="satelital">Satelital</button>
                 <button class="sp-chip" type="button" data-base="dark">Oscuro</button>
                 <button class="sp-chip" type="button" data-base="positron">Claro</button>
-                <button class="sp-chip" type="button" data-base="liberty">Calles</button>
+                <button class="sp-chip" type="button" data-base="liberty" aria-pressed="true">Calles</button>
               </div>
             </div>
           </details>
@@ -313,7 +311,7 @@
       };
 
       var estado = {
-        base: "satelital",
+        base: "liberty",
         terreno: true,
         relieve: true,
         deptos: true,
@@ -328,7 +326,7 @@
 
       var map = new maplibregl.Map({
         container: "map",
-        style: ESTILOS.satelital,
+        style: ESTILOS.liberty,
         center: VISTAS.bogota.center,
         zoom: 6.6,
         pitch: 58,
